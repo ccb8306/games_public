@@ -1,0 +1,26 @@
+services:
+  yacht-dice:
+    image: yacht-dice:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${HOST_PORT:-13000}:3000"
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      DISCONNECT_GRACE_SECONDS: "${DISCONNECT_GRACE_SECONDS:-60}"
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 15s
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

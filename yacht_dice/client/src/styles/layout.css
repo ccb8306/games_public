@@ -1,0 +1,79 @@
+.app {
+  max-width: 1400px;
+  margin: auto;
+  padding: 0 1.25rem 0.5rem;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 60px;
+  border-bottom: 1px solid #293b49;
+  margin-bottom: 0.75rem;
+}
+
+.brand {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.brand span {
+  font-size: 2rem;
+  color: #71dfb7;
+}
+
+.brand b {
+  color: #71dfb7;
+}
+
+.connection {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 0.85rem;
+  color: #e8bf76;
+}
+
+.online {
+  color: #95b7ab;
+}
+
+.panel {
+  border: 1px solid #304451;
+  background: var(--color-panel);
+  border-radius: var(--radius-panel);
+  padding: 1.1rem;
+  box-shadow: 0 12px 40px #0002;
+}
+
+.room-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.room-meta h1 {
+  margin: 0;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.room-meta > span {
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  white-space: nowrap;
+}
+
+.topbar > button {
+  flex-shrink: 0;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8rem;
+}

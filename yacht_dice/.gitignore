@@ -1,0 +1,9 @@
+node_modules/
+.npm-cache/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+.runtime/
+.docs
+AGENTS.md

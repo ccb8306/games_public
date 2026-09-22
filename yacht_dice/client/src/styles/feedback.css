@@ -1,0 +1,433 @@
+/* Visual tokens only. Input locks are controlled by FEEDBACK_TIMING. */
+:root {
+  --feedback-normal: #a8dcca;
+  --feedback-special: #ffe09a;
+  --feedback-normal-bg: #294c42;
+  --feedback-special-bg: #584c2c;
+  --feedback-enter: 240ms;
+  --feedback-shake: 180ms;
+  --feedback-throw: 500ms;
+  --feedback-overlay-bg: rgb(228 243 233 / 90%);
+  --feedback-overlay-normal: #497560;
+  --feedback-overlay-special: #183e30;
+}
+.score-panel
+  td[data-highlight="special"]
+  > :is(.preview-score, .score-highlight) {
+  background: var(--feedback-special-bg);
+  border-color: var(--feedback-special);
+  color: var(--feedback-special);
+}
+.score-panel td[data-feedback="score-recorded"] {
+  animation: record-flash 1.2s ease-out;
+}
+.table-area {
+  position: relative;
+  isolation: isolate;
+  container-type: inline-size;
+}
+.action-feedback {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.6rem;
+  text-align: center;
+  pointer-events: none;
+}
+.turn-intro,
+.record-feedback {
+  position: relative;
+  z-index: 3;
+  max-width: 100%;
+  padding: 0.65rem 1rem;
+  border: 1px solid #527367;
+  border-radius: 12px;
+  background: #17362ff5;
+  box-shadow: 0 6px 20px #0004;
+  overflow-wrap: anywhere;
+  animation: feedback-enter var(--feedback-enter) ease-out;
+}
+.combo-feedback {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.5rem, 2cqi, 1rem);
+  padding: clamp(1rem, 5cqi, 2rem);
+  border-radius: var(--radius-panel);
+  background: var(--feedback-overlay-bg);
+  pointer-events: auto;
+  animation: feedback-enter var(--feedback-enter) ease-out both;
+}
+.combo-feedback > span {
+  display: block;
+  max-width: 100%;
+  order: 1;
+  line-height: 1.05;
+  white-space: nowrap;
+  font-weight: 750;
+}
+.combo-feedback small {
+  display: inline-block;
+  font-size: 0.45em;
+  font-weight: 650;
+  vertical-align: middle;
+}
+.combo-feedback [data-highlight="normal"] {
+  color: var(--feedback-overlay-normal);
+  font-size: clamp(0.75rem, 4.2cqi, 2rem);
+}
+.combo-feedback [data-highlight="special"] {
+  order: 0;
+  color: var(--feedback-overlay-special);
+  font-size: clamp(0.9rem, 7cqi, 4.75rem);
+  font-weight: 900;
+  letter-spacing: -0.045em;
+}
+.combo-feedback [data-category="yacht"] {
+  font-size: clamp(1.5rem, 18cqi, 7rem);
+  letter-spacing: 0.03em;
+}
+.combo-feedback [data-highlight="normal"]:only-child {
+  font-size: clamp(0.9rem, 7cqi, 4.75rem);
+}
+.turn-intro {
+  color: var(--feedback-special);
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
+  font-weight: 800;
+}
+.record-feedback {
+  color: var(--feedback-normal);
+  font-size: 0.9rem;
+  animation: feedback-enter var(--feedback-enter) ease-out;
+}
+.dice-tray[data-roll-phase="shaking"] .die:not(.held) {
+  animation: dice-shake var(--feedback-shake) ease-in-out infinite alternate;
+}
+.dice-tray[data-roll-phase="shaking"] .die:nth-child(even):not(.held) {
+  animation-direction: alternate-reverse;
+}
+.dice-tray[data-roll-phase="throwing"] .die:not(.held) {
+  animation: dice-throw var(--feedback-throw) ease-out both;
+}
+.die [data-feedback="hold-changed"] {
+  animation: hold-pop 300ms ease-out;
+}
+@keyframes dice-shake {
+  from {
+    transform: translate(-2px, -5px) rotate(-9deg);
+  }
+  to {
+    transform: translate(2px, 2px) rotate(9deg);
+  }
+}
+@keyframes dice-throw {
+  0% {
+    transform: translateY(-24px) rotate(-18deg);
+  }
+  65% {
+    transform: translateY(3px) rotate(7deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes feedback-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes record-flash {
+  from {
+    background: #60755e;
+  }
+  to {
+    background: transparent;
+  }
+}
+@keyframes hold-pop {
+  50% {
+    transform: scale(1.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dice-tray .die,
+  .dice-tray .die span,
+  .combo-feedback,
+  .combo-feedback > span,
+  .turn-intro,
+  .record-feedback,
+  .score-panel td[data-feedback] {
+    animation: none !important;
+    transition: none !important;
+  }
+  .score-panel td[data-feedback="score-recorded"] {
+    background: #60755e;
+  }
+}
+
+/* Effects decorate the room without consuming clicks or moving its layout. */
+.celebration-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none;
+  overflow: hidden;
+}
+.celebration {
+  position: absolute;
+  inset: 0;
+}
+.firework-burst {
+  position: absolute;
+  left: var(--burst-x);
+  top: var(--burst-y);
+  --burst-radius: clamp(140px, 28vmin, 360px);
+}
+.firework-burst::before {
+  content: "";
+  position: absolute;
+  inset: -45px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #fff9,
+    hsl(var(--burst-hue) 100% 70% / 40%) 25%,
+    transparent 70%
+  );
+  animation: firework-ring
+    calc(var(--celebration-duration) - var(--burst-delay)) ease-out
+    var(--burst-delay) both;
+}
+.firework-burst i {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  color: hsl(var(--hue) 100% 72%);
+  background: currentColor;
+  box-shadow:
+    0 0 9px currentColor,
+    0 0 22px currentColor;
+  opacity: 0;
+  animation: firework-burst
+    calc(var(--celebration-duration) - var(--burst-delay))
+    cubic-bezier(0.12, 0.65, 0.25, 1) var(--burst-delay) both;
+}
+.firework-burst i:nth-child(3n) {
+  width: 6px;
+  height: 20px;
+  border-radius: 4px;
+}
+@keyframes firework-burst {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(0) scale(0.2);
+  }
+  12% {
+    opacity: 1;
+    transform: rotate(var(--angle))
+      translateY(calc(var(--burst-radius) * var(--reach) * 0.18)) scale(1.2);
+  }
+  55% {
+    opacity: 1;
+    transform: rotate(var(--angle))
+      translateY(calc(var(--burst-radius) * var(--reach) * 0.72)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle))
+      translateY(calc(var(--burst-radius) * var(--reach))) scale(0.45);
+  }
+}
+
+@keyframes firework-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.15);
+  }
+  12% {
+    opacity: 0.85;
+  }
+  65%,
+  100% {
+    opacity: 0;
+    transform: scale(2.5);
+  }
+}
+.celebration-confetti {
+  position: absolute;
+  inset: 0;
+}
+.celebration-confetti i {
+  position: absolute;
+  top: -20px;
+  left: var(--confetti-x);
+  width: 10px;
+  height: 18px;
+  border-radius: 2px;
+  background: hsl(var(--hue) 95% 65%);
+  animation: confetti-fall
+    calc(var(--celebration-duration) - var(--confetti-delay)) ease-in
+    var(--confetti-delay) both;
+}
+.celebration-confetti i:nth-child(3n) {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -5vh, 0) rotate(var(--tilt));
+  }
+  10%,
+  65% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--drift), 110vh, 0) rotate(var(--spin));
+  }
+}
+.celebration-aura {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    #ffcd5755,
+    #d18b0018 45%,
+    transparent 75%
+  );
+  animation: celebration-glow var(--celebration-duration) ease-out both;
+}
+.celebration-title {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff0a6;
+  line-height: 1;
+  text-shadow:
+    0 3px 0 #9a5600,
+    0 0 18px #ffbf47,
+    0 4px 40px #000b;
+  animation: yacht-celebration var(--celebration-duration) ease-out both;
+}
+.celebration-title strong {
+  font-size: clamp(3rem, 13vw, 9rem);
+  font-weight: 950;
+  letter-spacing: -0.045em;
+}
+.celebration-title span {
+  margin-top: 0.2em;
+  font-size: clamp(2.2rem, 7vw, 5rem);
+  font-weight: 850;
+}
+@keyframes celebration-glow {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  15%,
+  65% {
+    opacity: 1;
+  }
+}
+@keyframes yacht-celebration {
+  0% {
+    opacity: 0;
+    transform: scale(0.65);
+  }
+  18% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+  30%,
+  72% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.06) translateY(-16px);
+  }
+}
+.celebration-scream {
+  display: grid;
+  place-items: center;
+  font-size: clamp(5rem, 20vw, 10rem);
+  animation: scream-pop var(--celebration-duration) ease-out both;
+}
+@keyframes scream-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  20%,
+  70% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.1);
+  }
+}
+@media (max-width: 600px) {
+  .firework-burst i {
+    width: 7px;
+    height: 7px;
+    box-shadow: 0 0 7px currentColor;
+  }
+  .firework-burst i:nth-child(4n) {
+    display: none;
+  }
+  .firework-burst i:nth-child(3n) {
+    width: 4px;
+    height: 14px;
+  }
+  .celebration-confetti i:nth-child(n + 49) {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .firework-burst::before {
+    display: none;
+  }
+  .firework-burst i {
+    animation: none;
+    opacity: 0.8;
+    transform: rotate(var(--angle)) translateY(clamp(40px, 8vmin, 100px));
+  }
+  .celebration-confetti i {
+    animation: none;
+    top: var(--rest-y);
+    opacity: 0.75;
+    transform: rotate(var(--tilt));
+  }
+  .celebration-confetti i:nth-child(n + 25) {
+    display: none;
+  }
+  .celebration-title,
+  .celebration-aura,
+  .celebration-scream {
+    animation: none;
+  }
+}
