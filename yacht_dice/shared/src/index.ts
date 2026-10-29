@@ -1,7 +1,9 @@
+import { motionSchema } from "./motion.js";
+export { motionSchema, FACE_ORDER, type Pose, type MotionFrame } from "./motion.js";
 import { z } from "zod";
 import { avatarSchema } from "./avatar.js";
 export { AVATAR_IDS, MAX_AVATAR_BYTES, DEFAULT_AVATAR, avatarSchema, isAvatarPng, type Avatar } from "./avatar.js";
-export { emptyScorecard, categoryScore, totals, applyGameAction, activePlayers, nextPlayerId, standings, settleGame } from "./game.js";
+export { emptyScorecard, categoryScore, totals, applyGameAction, completeRoll, activePlayers, nextPlayerId, standings, settleGame } from "./game.js";
 
 export const SCORE_CATEGORIES = [
   "ones",
@@ -85,7 +87,8 @@ export const roomStateSchema = z.strictObject({
   dice: diceSchema,
   held: heldSchema,
   rollCount: z.number().int().min(0).max(3),
-  rollPhase: z.enum(["idle", "shaking"]),
+  rollPhase: z.enum(["idle", "shaking", "throwing"]),
+  motion: motionSchema.nullable().optional(),
   revision: revisionSchema,
   reconnectDeadline: z.number().int().nonnegative().nullable(),
   outcome: z.discriminatedUnion("kind", [
@@ -111,6 +114,7 @@ const roomActionBase = {
 };
 
 export const clientMessageSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("clock"), requestId: requestIdSchema, sentAt: z.number().finite() }),
   z.strictObject({ type: z.literal("sendChat"), requestId: requestIdSchema, roomId: roomIdSchema, text: chatTextSchema }),
   z.strictObject({ type: z.literal("createRoom"), requestId: requestIdSchema, nickname: nicknameSchema, avatar: avatarSchema.optional(), capacity: capacitySchema.optional(), disconnectGraceSeconds: disconnectGraceSchema.optional() }),
   z.strictObject({ type: z.literal("joinRoom"), requestId: requestIdSchema, code: roomCodeSchema, nickname: nicknameSchema, avatar: avatarSchema.optional() }),
@@ -138,6 +142,8 @@ export const errorCodeSchema = z.enum(ERROR_CODES);
 export type ErrorCode = z.infer<typeof errorCodeSchema>;
 
 export const serverMessageSchema = z.discriminatedUnion("type", [
+  z.strictObject({ type: z.literal("clock"), requestId: requestIdSchema, sentAt: z.number().finite(), serverAt: z.number().finite() }),
+  z.strictObject({ type: z.literal("motion"), roomId: roomIdSchema, frames: z.array(motionSchema).min(1).max(3) }),
   z.strictObject({ type: z.literal("chatHistory"), roomId: roomIdSchema, messages: z.array(chatMessageSchema).max(CHAT_HISTORY_LIMIT) }),
   z.strictObject({ type: z.literal("chatMessage"), roomId: roomIdSchema, message: chatMessageSchema }),
   z.strictObject({ type: z.literal("chatAccepted"), requestId: requestIdSchema, roomId: roomIdSchema, messageId: z.uuid() }),

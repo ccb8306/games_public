@@ -18,9 +18,9 @@ export type RecordedScore = {
 };
 export type RollPhase = "idle" | "shaking" | "throwing" | "result";
 export const FEEDBACK_TIMING = {
-  throw: 500,
+  throw: 150,
   turnIntro: 500,
-  result: 1600,
+  result: 2800,
   recorded: 1200,
   hold: 300,
 } as const;

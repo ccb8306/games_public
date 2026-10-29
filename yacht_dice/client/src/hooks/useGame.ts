@@ -1,3 +1,4 @@
+import { MotionStream } from "../dice/motion";
 import { useEffect, useRef, useState } from "react";
 import {
   decodeClientMessage,
@@ -16,6 +17,7 @@ import {
 } from "../network/protocol";
 
 export function useGame() {
+  const [motion] = useState(() => new MotionStream());
   const [room, setRoom] = useState<RoomState | null>(null);
   const lastRoom = useRef<RoomState | null>(null);
   const [snapshotEpoch, setSnapshotEpoch] = useState(0);
@@ -70,6 +72,7 @@ export function useGame() {
     let disposed = false,
       timer: ReturnType<typeof setTimeout> | undefined,
       retry = 0;
+    let clockTimer: ReturnType<typeof setInterval> | undefined;
     function connect() {
       let firstSnapshot = true;
       const ws = new WebSocket(socketUrl(location));
@@ -78,6 +81,17 @@ export function useGame() {
         if (disposed) return;
         setConnected(true);
         retry = 0;
+        const syncClock = () =>
+          ws.readyState === WebSocket.OPEN &&
+          ws.send(
+            JSON.stringify({
+              type: "clock",
+              requestId: requestId(),
+              sentAt: Date.now(),
+            }),
+          );
+        syncClock();
+        clockTimer = setInterval(syncClock, 10000);
         if (saved.current) {
           const id = requestId();
           pending.current = { type: "resumeRoom", id };
@@ -101,6 +115,14 @@ export function useGame() {
           return;
         }
         const msg = parsed.data;
+        if (msg.type === "clock") {
+          motion.clock(msg.sentAt, msg.serverAt);
+          return;
+        }
+        if (msg.type === "motion") {
+          if (saved.current?.roomId === msg.roomId) motion.ingest(msg.frames);
+          return;
+        }
         if (msg.type === "chatHistory" || msg.type === "chatMessage") {
           if (saved.current?.roomId !== msg.roomId) return;
           if (msg.type === "chatHistory") {
@@ -146,6 +168,7 @@ export function useGame() {
           );
           if (firstSnapshot) setSnapshotEpoch((epoch) => epoch + 1);
           firstSnapshot = false;
+          motion.snapshot(msg.state.motion);
           lastRoom.current = msg.state;
           setRoom(msg.state);
         }
@@ -189,6 +212,7 @@ export function useGame() {
       ws.onclose = (event) => {
         if (disposed) return;
         setConnected(false);
+        clearInterval(clockTimer);
         setLiveChatMessages([]);
         clearPending();
         if (chatPending.current)
@@ -210,6 +234,8 @@ export function useGame() {
     connect();
     return () => {
       disposed = true;
+      clearInterval(clockTimer);
+      motion.reset();
       clearTimeout(timer);
       clearTimeout(timeout.current);
       clearTimeout(chatTimeout.current);
@@ -299,6 +325,7 @@ export function useGame() {
     }
   }
   return {
+    motion,
     snapshotEpoch,
     liveStart,
     room,

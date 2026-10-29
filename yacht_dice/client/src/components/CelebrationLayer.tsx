@@ -72,7 +72,7 @@ function Celebration({
       }
     >
       {event.kind === "scream" ? (
-        <span>😱</span>
+        <img className="sans-face" src="/sans-face.svg" alt="" />
       ) : (
         <>
           {yacht && <div className="celebration-aura" />}

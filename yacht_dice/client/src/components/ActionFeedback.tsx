@@ -30,15 +30,27 @@ export function ActionFeedback({
       )}
       {banner && celebrations.length > 0 && (
         <div className="combo-feedback" key={eventKey}>
-          {celebrations.map((c) => (
-            <span
-              key={c.category}
-              data-category={c.category}
-              data-highlight={c.highlight}
-            >
-              {COMBO_LABELS[c.category]} <small>{c.score}</small>
-            </span>
-          ))}
+          <div className="combo-heading">
+            <span aria-hidden="true">✦</span> 족보 달성!{" "}
+            <span aria-hidden="true">✦</span>
+          </div>
+          <div className="combo-cards">
+            {celebrations.map((c) => (
+              <span
+                key={c.category}
+                data-category={c.category}
+                data-highlight={c.highlight}
+              >
+                <small className="combo-label">
+                  {COMBO_LABELS[c.category]}
+                </small>
+                <strong>{SCORE_LABELS[c.category]}</strong>
+                <small className="combo-score">
+                  {c.score}점 <em>기록 가능</em>
+                </small>
+              </span>
+            ))}
+          </div>
         </div>
       )}
       <CelebrationLayer

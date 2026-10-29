@@ -1,3 +1,4 @@
+import type { MotionStream } from "../dice/motion";
 import { useEffect, useState } from "react";
 import {
   nextPlayerId,
@@ -12,6 +13,7 @@ import { DiceTray } from "../components/DiceTray";
 import { ScoreTable } from "../components/ScoreTable";
 import { ResultScreen } from "./ResultScreen";
 type Props = {
+  motion?: MotionStream;
   room: RoomState;
   playerId?: string;
   connected: boolean;
@@ -25,6 +27,7 @@ type Props = {
   onLeave: () => void;
 };
 export function GameScreen({
+  motion,
   room,
   playerId,
   connected,
@@ -54,6 +57,40 @@ export function GameScreen({
   });
   const { myTurn, paused, canPlay, canScore, selected } = scoring;
   const [now, setNow] = useState(Date.now());
+  const canThrow =
+    myTurn && connected && !paused && !busy && room.rollPhase === "shaking";
+  const canShake =
+    canPlay &&
+    !feedback.locked &&
+    room.rollPhase === "idle" &&
+    room.rollCount < 3 &&
+    !room.held.every(Boolean);
+  useEffect(() => {
+    function throwWithSpace(event: KeyboardEvent) {
+      if (
+        (!canThrow && !canShake) ||
+        (event.code !== "Space" && event.key !== " ") ||
+        event.repeat ||
+        event.isComposing ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.metaKey
+      )
+        return;
+      if (
+        event.target instanceof window.HTMLElement &&
+        event.target.closest(
+          'input, textarea, select, .chat-panel, [contenteditable], [role="textbox"]',
+        )
+      )
+        return;
+      event.preventDefault();
+      if (canThrow) onRoll();
+      else onStartShake();
+    }
+    window.addEventListener("keydown", throwWithSpace);
+    return () => window.removeEventListener("keydown", throwWithSpace);
+  }, [canThrow, canShake, onRoll, onStartShake]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
@@ -137,6 +174,7 @@ export function GameScreen({
               </div>
             )}
             <DiceTray
+              motion={motion}
               phase={feedback.phase}
               holdFeedback={feedback.holds}
               dice={room.dice}
@@ -147,43 +185,42 @@ export function GameScreen({
             <p className="dice-hint">
               {feedback.phase === "shaking"
                 ? myTurn
-                  ? "원하는 때에 멈춤을 눌러 던지세요."
-                  : "상대가 주사위를 흔들고 있어요."
+                  ? "던지기 버튼 또는 스페이스바로 쏟으세요."
+                  : "상대가 주사위 컵을 흔들고 있어요."
                 : feedback.phase === "throwing"
-                  ? "주사위를 던지고 있어요…"
+                  ? "컵을 뒤집어 주사위를 쏟고 있어요…"
                   : myTurn
-                    ? room.rollCount
-                      ? "주사위를 누르면 다음 굴림에서 보관해요."
-                      : "첫 주사위를 굴려 시작하세요."
+                    ? room.rollCount < 3
+                      ? "흔들기 버튼 또는 스페이스바로 시작하세요."
+                      : room.rollCount
+                        ? "주사위나 아래 슬롯을 눌러 보관 · 다시 눌러 해제"
+                        : "흔들기를 눌러 컵에 주사위를 담으세요."
                     : "상대의 주사위와 점수를 함께 보고 있어요."}
             </p>
             {myTurn ? (
-              <button
-                className="primary roll"
-                disabled={
-                  (!canPlay && feedback.phase !== "shaking") ||
-                  !connected ||
-                  busy ||
-                  paused ||
-                  feedback.locked ||
-                  room.rollCount === 3 ||
-                  (room.rollCount > 0 && room.held.every(Boolean))
-                }
-                onClick={() =>
-                  feedback.phase === "shaking" ? onRoll() : onStartShake()
-                }
-              >
-                {busy
-                  ? "처리 중…"
-                  : room.rollCount === 3
-                    ? "점수를 기록하세요"
-                    : feedback.phase === "shaking"
-                      ? "멈춤"
-                      : feedback.phase === "throwing"
-                        ? "던지는 중…"
-                        : "흔들기"}
-                <span>{3 - room.rollCount}회 남음</span>
-              </button>
+              <div className="dice-actions">
+                <button
+                  className="primary roll"
+                  disabled={
+                    !canPlay ||
+                    feedback.locked ||
+                    room.rollPhase !== "idle" ||
+                    room.rollCount === 3 ||
+                    room.held.every(Boolean)
+                  }
+                  onClick={onStartShake}
+                >
+                  흔들기 <span>{3 - room.rollCount}회 남음 · Space</span>
+                </button>
+                <button
+                  className="primary throw"
+                  disabled={!canThrow}
+                  onClick={onRoll}
+                >
+                  {room.rollPhase === "throwing" ? "쏟는 중…" : "던지기"}
+                  <small>Space</small>
+                </button>
+              </div>
             ) : (
               <div className="opponent-turn" role="status">
                 <strong>{current?.nickname ?? "상대방"}님의 턴입니다</strong>

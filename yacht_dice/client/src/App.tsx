@@ -107,6 +107,7 @@ export function App() {
               />
             ) : (
               <GameScreen
+                motion={game.motion}
                 snapshotEpoch={game.snapshotEpoch}
                 initialTurnIntro={game.liveStart}
                 onStartShake={() => game.action({ type: "startShake" })}

@@ -1,0 +1,26 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createApp } from "../dist/app.js";
+import { connect, createGroup } from "./network-fixture.mjs";
+test("four peers receive identical poses; disconnect during throw preserves result and final layout",async t=>{
+  const app=createApp();await new Promise(r=>app.server.listen(0,"127.0.0.1",r));t.after(()=>app.close());
+  const url="ws://127.0.0.1:"+app.server.address().port+"/ws";
+  const peers=await createGroup(url);
+  const actor=peers.find(c=>c.session.playerId===c.state.currentPlayerId);
+  await actor.command("startShake");
+  await Promise.all(peers.map(p=>p.until(()=>p.frames.length>=20)));
+  const common=actor.frames[10];
+  for(const peer of peers)assert.deepEqual(peer.frames.find(f=>f.seq===common.seq&&f.id===common.id),common);
+  await actor.command("roll");
+  const oldSession=actor.session;actor.ws.close();
+  const other=peers.find(p=>p!==actor);
+  await other.until(()=>other.state.rollPhase==="idle");
+  assert.equal(other.state.rollCount,1);
+  const result=structuredClone(other.state);
+  const resumed=await connect(url);
+  resumed.send("resumeRoom",{code:oldSession.code,token:oldSession.token});
+  await resumed.until(()=>resumed.state);
+  assert.deepEqual(resumed.state.dice,result.dice);
+  assert.deepEqual(resumed.state.motion,result.motion);
+  assert.equal(resumed.state.motion.phase,"rest");
+});

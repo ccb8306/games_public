@@ -5,11 +5,6 @@
   --feedback-normal-bg: #294c42;
   --feedback-special-bg: #584c2c;
   --feedback-enter: 240ms;
-  --feedback-shake: 180ms;
-  --feedback-throw: 500ms;
-  --feedback-overlay-bg: rgb(228 243 233 / 90%);
-  --feedback-overlay-normal: #497560;
-  --feedback-overlay-special: #183e30;
 }
 .score-panel
   td[data-highlight="special"]
@@ -54,50 +49,80 @@
 }
 .combo-feedback {
   position: absolute;
-  inset: 0;
+  top: 28%;
+  left: 0.75rem;
+  right: 0.75rem;
   z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: clamp(0.5rem, 2cqi, 1rem);
-  padding: clamp(1rem, 5cqi, 2rem);
-  border-radius: var(--radius-panel);
-  background: var(--feedback-overlay-bg);
-  pointer-events: auto;
+  gap: 0.65rem;
+  pointer-events: none;
   animation: feedback-enter var(--feedback-enter) ease-out both;
 }
-.combo-feedback > span {
-  display: block;
-  max-width: 100%;
-  order: 1;
-  line-height: 1.05;
-  white-space: nowrap;
+.combo-heading {
+  color: #fff0b5;
+  font-size: clamp(1.1rem, 4cqi, 1.8rem);
+  font-weight: 900;
+  text-shadow:
+    0 2px 6px #000,
+    0 0 18px #ffcb62;
+}
+.combo-heading span {
+  color: #ffd47e;
+}
+.combo-cards {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.combo-cards > span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #78a88b;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #244b40, #102d27);
+  box-shadow: 0 8px 24px #0006;
+  color: #c2ead4;
+  line-height: 1.2;
+  font-size: clamp(0.9rem, 3cqi, 1.3rem);
   font-weight: 750;
 }
-.combo-feedback small {
-  display: inline-block;
-  font-size: 0.45em;
-  font-weight: 650;
-  vertical-align: middle;
+.combo-label {
+  font-size: 0.55em;
+  letter-spacing: 0.1em;
 }
-.combo-feedback [data-highlight="normal"] {
-  color: var(--feedback-overlay-normal);
-  font-size: clamp(0.75rem, 4.2cqi, 2rem);
+.combo-score {
+  font-size: 1.05em;
+}
+.combo-score em {
+  font-size: 0.65em;
+  font-style: normal;
+  font-weight: 500;
+}
+.combo-cards > span {
+  animation: combo-pop 450ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+@keyframes combo-pop {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .combo-feedback [data-highlight="special"] {
-  order: 0;
-  color: var(--feedback-overlay-special);
-  font-size: clamp(0.9rem, 7cqi, 4.75rem);
-  font-weight: 900;
-  letter-spacing: -0.045em;
-}
-.combo-feedback [data-category="yacht"] {
-  font-size: clamp(1.5rem, 18cqi, 7rem);
-  letter-spacing: 0.03em;
-}
-.combo-feedback [data-highlight="normal"]:only-child {
-  font-size: clamp(0.9rem, 7cqi, 4.75rem);
+  color: #ffe0a1;
+  border-color: #d4af68;
+  background: linear-gradient(135deg, #63502b, #302819);
+  box-shadow:
+    0 0 24px #eab64e40,
+    0 8px 24px #0006;
 }
 .turn-intro {
   color: var(--feedback-special);
@@ -109,36 +134,8 @@
   font-size: 0.9rem;
   animation: feedback-enter var(--feedback-enter) ease-out;
 }
-.dice-tray[data-roll-phase="shaking"] .die:not(.held) {
-  animation: dice-shake var(--feedback-shake) ease-in-out infinite alternate;
-}
-.dice-tray[data-roll-phase="shaking"] .die:nth-child(even):not(.held) {
-  animation-direction: alternate-reverse;
-}
-.dice-tray[data-roll-phase="throwing"] .die:not(.held) {
-  animation: dice-throw var(--feedback-throw) ease-out both;
-}
 .die [data-feedback="hold-changed"] {
   animation: hold-pop 300ms ease-out;
-}
-@keyframes dice-shake {
-  from {
-    transform: translate(-2px, -5px) rotate(-9deg);
-  }
-  to {
-    transform: translate(2px, 2px) rotate(9deg);
-  }
-}
-@keyframes dice-throw {
-  0% {
-    transform: translateY(-24px) rotate(-18deg);
-  }
-  65% {
-    transform: translateY(3px) rotate(7deg);
-  }
-  100% {
-    transform: none;
-  }
 }
 @keyframes feedback-enter {
   from {
@@ -166,8 +163,9 @@
 @media (prefers-reduced-motion: reduce) {
   .dice-tray .die,
   .dice-tray .die span,
+  .dice-tray .die-face::before,
   .combo-feedback,
-  .combo-feedback > span,
+  .combo-cards > span,
   .turn-intro,
   .record-feedback,
   .score-panel td[data-feedback] {
@@ -374,6 +372,11 @@
   place-items: center;
   font-size: clamp(5rem, 20vw, 10rem);
   animation: scream-pop var(--celebration-duration) ease-out both;
+}
+.sans-face {
+  width: min(64vw, 340px);
+  height: auto;
+  filter: drop-shadow(0 0 18px #00cfff80) drop-shadow(0 8px 24px #0009);
 }
 @keyframes scream-pop {
   0% {

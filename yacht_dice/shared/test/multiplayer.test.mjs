@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { roomStateSchema, clientMessageSchema, applyGameAction, emptyScorecard, SCORE_CATEGORIES, settleGame, standings, nextPlayerId } from "../dist/index.js";
+import { completeRoll, roomStateSchema, clientMessageSchema, applyGameAction, emptyScorecard, SCORE_CATEGORIES, settleGame, standings, nextPlayerId } from "../dist/index.js";
 
 function room(capacity, slots = Array.from({ length: capacity }, (_, i) => i)) {
   return roomStateSchema.parse({ roomId: randomUUID(), code: "ABCDEF12", capacity, disconnectGraceSeconds: 60, phase: "waiting", players: Array.from({ length: capacity }, (_, slot) => slots.includes(slot) ? { id: randomUUID(), slot, nickname: `P${slot}`, connected: true, ready: false, scores: emptyScorecard() } : null), currentPlayerId: null, dice: [null, null, null, null, null], held: [false, false, false, false, false], rollCount: 0, rollPhase: "idle", revision: 0, reconnectDeadline: null, outcome: null });
@@ -9,6 +9,11 @@ function room(capacity, slots = Array.from({ length: capacity }, (_, i) => i)) {
 function command(state, id, type, fields = {}, random = () => 0) {
   const result = applyGameAction(state, id, { type, ...fields, requestId: randomUUID(), roomId: state.roomId, expectedRevision: state.revision }, random);
   assert.equal(result.ok, true, result.message);
+  if(type==="roll") {
+    const frame={id:randomUUID(),seq:1,at:Date.now(),phase:"rest",dice:Array.from({length:5},()=>({p:[0,.48,0],q:[0,0,0,1]})),cup:null,wind:false,paused:false};
+    result.state.motion=frame;
+    return completeRoll(result.state,[1,1,1,1,1],frame);
+  }
   return result.state;
 }
 function start(state, first = 0) {

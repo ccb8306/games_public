@@ -57,6 +57,7 @@ export function createApp(options: { graceMs?: number; now?: () => number } = {}
     clearInterval(sweep); clearInterval(heartbeat);
     for (const ws of wss.clients) ws.terminate();
     wss.close();
+    await rooms.close();
     await new Promise<void>(resolveClose => server.close(() => resolveClose()));
   }
   return { server, rooms, close };

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 200">
+  <defs>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+  </defs>
+  <path d="M44 115C20 100 25 62 42 40C59 18 88 12 120 12C160 12 189 25 201 49C214 74 216 102 197 115L198 134C190 164 158 182 120 182C79 182 48 165 40 140Z" fill="#fffdf5" stroke="#10151c" stroke-width="7" stroke-linejoin="round"/>
+  <path d="M45 69C52 49 86 48 99 64C107 75 102 100 89 107C73 115 47 103 44 88Z" fill="#10151c"/>
+  <path d="M139 64C153 49 184 51 194 70L195 88C187 108 163 114 149 104C137 96 132 77 139 64Z" fill="#10151c"/>
+  <ellipse cx="75" cy="82" rx="5" ry="8" fill="#fffdf5"/>
+  <ellipse cx="166" cy="81" rx="13" ry="18" fill="#00d9ff" filter="url(#glow)"/>
+  <ellipse cx="166" cy="81" rx="7" ry="12" fill="#00d9ff"/>
+  <ellipse cx="166" cy="80" rx="3" ry="7" fill="#eaffff"/>
+  <path d="M120 94L109 112Q119 119 130 112Z" fill="#10151c"/>
+  <path d="M53 113Q119 146 188 112L180 140Q121 178 62 143Z" fill="#fffdf5" stroke="#10151c" stroke-width="6" stroke-linejoin="round"/>
+  <path d="M58 129Q121 158 184 128M77 123L80 150M99 130L100 158M122 134V162M145 131L143 158M166 124L162 151" fill="none" stroke="#10151c" stroke-width="4"/>
+  <path d="M44 114L54 117M187 116L199 112" stroke="#10151c" stroke-width="6" stroke-linecap="round"/>
+</svg>

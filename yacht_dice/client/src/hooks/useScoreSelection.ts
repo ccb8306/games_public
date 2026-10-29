@@ -76,7 +76,7 @@ export function useScoreSelection({
     !submitting &&
     !paused &&
     !interactionLocked &&
-    room.rollPhase !== "shaking";
+    room.rollPhase === "idle";
   const dice = room.dice.every((die): die is number => die !== null)
     ? room.dice
     : null;

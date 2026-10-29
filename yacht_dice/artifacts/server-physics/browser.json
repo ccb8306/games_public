@@ -1,0 +1,26 @@
+{
+  "clients": 4,
+  "rounds": 3,
+  "widths": [
+    1440,
+    390,
+    1366,
+    780
+  ],
+  "latencyEachWayMs": [
+    0,
+    15,
+    35,
+    70
+  ],
+  "clockOffsetMs": [
+    0,
+    250,
+    -400,
+    700
+  ],
+  "sameFinalTransforms": true,
+  "reconnect": true,
+  "reducedMotion": true,
+  "contextLossFallback": true
+}

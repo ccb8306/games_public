@@ -99,7 +99,7 @@ export function useActionFeedback({
       clear();
       announceTurn();
     }
-    if (room.rollPhase === "shaking") {
+    if (room.rollPhase === "shaking" || room.rollPhase === "throwing") {
       cancel("roll");
       setRoll(null);
     } else if (!changedTurn && room.rollCount > last.room.rollCount) {
@@ -168,8 +168,8 @@ export function useActionFeedback({
   const phase: RollPhase =
     !available || room.phase !== "playing"
       ? "idle"
-      : room.rollPhase === "shaking"
-        ? "shaking"
+      : room.rollPhase !== "idle"
+        ? room.rollPhase
         : roll?.key === key
           ? roll.phase
           : room.rollCount

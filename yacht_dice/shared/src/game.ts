@@ -48,6 +48,7 @@ function resetTurn(state: RoomState) {
   state.dice = [null, null, null, null, null];
   state.held = [false, false, false, false, false];
   state.rollCount = 0;
+  state.motion = null;
   state.rollPhase = "idle";
 }
 export function standings(state: RoomState) {
@@ -99,6 +100,7 @@ export function applyGameAction(state: RoomState, actorId: string, action: Actio
     if (state.phase !== "playing") return fail("아직 경기가 시작되지 않았습니다.");
     if (activePlayers(state).some(p => !p.connected)) return fail("플레이어의 재접속을 기다리고 있습니다.", "GAME_PAUSED");
     if (state.currentPlayerId !== actorId) return fail("상대 플레이어의 차례입니다.");
+    if (state.rollPhase === "throwing") return fail("주사위가 멈출 때까지 기다려주세요.");
     if (state.rollPhase === "shaking" && action.type !== "roll") return fail("흔들기를 멈춘 후 조작해주세요.");
     if (action.type === "roll" || action.type === "startShake") {
       if (state.rollCount >= 3) return fail("주사위는 세 번까지 굴릴 수 있습니다.");
@@ -107,9 +109,7 @@ export function applyGameAction(state: RoomState, actorId: string, action: Actio
         next.rollPhase = "shaking";
       } else {
         if (state.rollPhase !== "shaking") return fail("먼저 흔들기를 시작해주세요.");
-        next.dice = state.dice.map((die, i) => state.rollCount > 0 && state.held[i] ? die : randomInt(6) + 1) as RoomState["dice"];
-        next.rollCount++;
-        next.rollPhase = "idle";
+        next.rollPhase = "throwing";
       }
     } else if (action.type === "setHolds") {
       if (!state.rollCount) return fail("먼저 주사위를 굴려주세요.");
@@ -127,4 +127,12 @@ export function applyGameAction(state: RoomState, actorId: string, action: Actio
   }
   next.revision++;
   return { ok: true, state: next };
+}
+
+
+/** Only server physics may complete a roll; no client command accepts its result. */
+export function completeRoll(state: RoomState, dice: RoomState["dice"], motion: NonNullable<RoomState["motion"]>): RoomState {
+  if (state.rollPhase !== "throwing" || state.motion?.id !== motion.id || motion.phase !== "rest") return state;
+  if (dice.some((n, i) => n === null || !Number.isInteger(n) || n < 1 || n > 6 || (state.held[i] && n !== state.dice[i]))) throw new Error("Invalid physical result");
+  return { ...state, dice: [...dice], motion, rollPhase: "idle", rollCount: state.rollCount + 1, revision: state.revision + 1 };
 }
