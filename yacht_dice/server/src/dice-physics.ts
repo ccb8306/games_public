@@ -16,6 +16,11 @@ export const REST_SPOTS = [
   [0, -0.7],
   [1.4, 0.7],
   [2.8, -0.5],
+  [-2.8, 2],
+  [-1.4, 2],
+  [0, 2],
+  [1.4, 2],
+  [2.8, 2],
 ];
 // Small steps prevent fast corner impacts from sinking into the cup floor.
 export const PHYSICS_STEP = 1 / 480;
@@ -34,7 +39,7 @@ export function faceUp(face: number, yaw = 0): Quaternion {
 }
 
 /** Authoritative collision world; no result is imposed after a throw. */
-export function createDicePhysics(random: () => number) {
+export function createDicePhysics(random: () => number, count = 5) {
   const world = new World({ gravity: new Vec3(0, -48, 0), allowSleep: true });
   world.broadphase = new SAPBroadphase(world);
   world.defaultContactMaterial.friction = 0.24;
@@ -61,31 +66,32 @@ export function createDicePhysics(random: () => number) {
   box(0, 2.75, -3.4, 9, 5.5, 0.4);
   box(0, 2.75, 3.4, 9, 5.5, 0.4);
   box(0, 5.5, 0, 9, 0.4, 7);
+  const cupScale = count > 8 ? 1.25 : 1;
   const cup: Body[] = [];
   for (let i = 0; i < 12; i++) {
     const angle = (i * Math.PI) / 6;
     const wall = box(
-      Math.sin(angle) * 1.825,
+      Math.sin(angle) * 1.825 * cupScale,
       1.35,
-      Math.cos(angle) * 1.825,
-      1.05,
+      Math.cos(angle) * 1.825 * cupScale,
+      1.05 * cupScale,
       2.5,
-      0.12,
+      0.12 * cupScale,
     );
     wall.quaternion.setFromEuler(0.1, angle, 0, "YXZ");
     world.removeBody(wall);
     cup.push(wall);
   }
-  const cupFloor = box(0, 0.16, 0, 3.4, 0.12, 3.4);
+  const cupFloor = box(0, 0.16, 0, 3.4 * cupScale, 0.12, 3.4 * cupScale);
   world.removeBody(cupFloor);
   cup.push(cupFloor);
-  const lid = box(0, 2.72, 0, 4, 0.16, 4);
+  const lid = box(0, 2.72, 0, 4 * cupScale, 0.16, 4 * cupScale);
   world.removeBody(lid);
   const cupRest = cup.map((body) => ({
     position: body.position.clone(),
     quaternion: body.quaternion.clone(),
   }));
-  const bodies = Array.from({ length: 5 }, (_, i) => {
+  const bodies = Array.from({ length: count }, (_, i) => {
     const body = new Body({
       mass: 1,
       // A small collision skin catches fast impacts before the visible 0.9-unit die clips.
@@ -93,7 +99,7 @@ export function createDicePhysics(random: () => number) {
       linearDamping: 0.1,
       angularDamping: 0.12,
     });
-    const [x, z] = REST_SPOTS[i]!;
+    const [x, z] = REST_SPOTS[i] ?? [(i - 5) * 1.4, 2];
     body.position.set(x!, 0.46, z!);
     world.addBody(body);
     return body;
@@ -165,9 +171,15 @@ export function createDicePhysics(random: () => number) {
       bodies.forEach((body, i) => {
         if (!body.world) return;
         body.position.set(
-          i === 4 ? 0 : i % 2 ? 0.62 : -0.62,
-          i === 4 ? 1.8 : 0.72,
-          i === 4 ? 0 : i < 2 ? -0.62 : 0.62,
+          count > 8 ? ((i % 3) - 1) * 1.05 : i % 2 ? 0.62 : -0.62,
+          i >= (count > 8 ? 6 : 4) ? 1.8 : 0.72,
+          count > 8
+            ? Math.floor(i / 3) % 2
+              ? 0.56
+              : -0.56
+            : i % 4 < 2
+              ? -0.62
+              : 0.62,
         );
         body.quaternion.copy(
           faceUp(

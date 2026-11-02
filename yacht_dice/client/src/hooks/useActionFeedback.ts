@@ -1,3 +1,4 @@
+import { augmentedScore } from "@yacht/shared";
 import { useLayoutEffect, useRef, useState } from "react";
 import { SCORE_CATEGORIES, type RoomState } from "@yacht/shared";
 import {
@@ -102,7 +103,17 @@ export function useActionFeedback({
     if (room.rollPhase === "shaking" || room.rollPhase === "throwing") {
       cancel("roll");
       setRoll(null);
-    } else if (!changedTurn && room.rollCount > last.room.rollCount) {
+    } else if (
+      !changedTurn &&
+      (room.rollCount > last.room.rollCount ||
+        (last.room.rollPhase === "throwing" &&
+          room.rollPhase === "idle" &&
+          !!room.motion &&
+          room.motion.id !== last.room.motion?.id) ||
+        (last.room.rollPhase === "throwing" &&
+          room.rollPhase === "idle" &&
+          !!last.room.augment?.turn.reroll))
+    ) {
       cancel("roll");
       setRoll({ key, phase: "throwing", banner: false });
       timers.current.roll = setTimeout(() => {
@@ -180,7 +191,16 @@ export function useActionFeedback({
     phase === "result" &&
     current &&
     room.dice.every((n): n is number => n !== null)
-      ? qualifications(room.dice, current.scores)
+      ? room.augment
+        ? SCORE_CATEGORIES.slice(6)
+            .filter((c) => current.scores[c] === null)
+            .map((category) => ({
+              category,
+              score: augmentedScore(room, current, category).score,
+              highlight: "normal" as const,
+            }))
+            .filter((q) => q.score > 0)
+        : qualifications(room.dice, current.scores)
       : [];
   return {
     phase,

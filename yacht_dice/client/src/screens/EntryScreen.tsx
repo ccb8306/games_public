@@ -16,6 +16,7 @@ type Props = {
     nickname: string,
     capacity: Capacity,
     disconnectGraceSeconds?: number,
+    mode?: "normal" | "augment",
   ) => void;
   onJoin: (nickname: string, code: string) => void;
 };
@@ -31,6 +32,7 @@ export function EntryScreen({
   profilePicker,
 }: Props) {
   const [capacity, setCapacity] = useState<Capacity>(2);
+  const [mode, setMode] = useState<"normal" | "augment">("normal");
   const [grace, setGrace] = useState("");
   const validGrace =
     grace === "" || disconnectGraceSchema.safeParse(Number(grace)).success;
@@ -56,6 +58,7 @@ export function EntryScreen({
                 nickname,
                 capacity,
                 grace === "" ? undefined : Number(grace),
+                mode,
               );
           }}
         >
@@ -70,6 +73,17 @@ export function EntryScreen({
             required
           />
           <fieldset className="room-settings" disabled={busy}>
+            <label htmlFor="room-mode">{"\uAC8C\uC784 \uBAA8\uB4DC"}</label>
+            <select
+              id="room-mode"
+              value={mode}
+              onChange={(e) => setMode(e.target.value as "normal" | "augment")}
+            >
+              <option value="normal">{"\uC77C\uBC18"}</option>
+              <option value="augment">
+                {"\uC99D\uAC15 ? \uC6B4\uBA85\uC758 \uC8FC\uC0AC\uC704"}
+              </option>
+            </select>
             <legend>새 방 설정</legend>
             <label htmlFor="room-capacity">최대 인원</label>
             <select

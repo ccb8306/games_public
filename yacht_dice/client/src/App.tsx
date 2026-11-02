@@ -61,12 +61,13 @@ export function App() {
           onCodeChange={setCode}
           connected={connected}
           busy={busy || profile.processing}
-          onCreate={(nickname, capacity, disconnectGraceSeconds) =>
+          onCreate={(nickname, capacity, disconnectGraceSeconds, mode) =>
             game.send({
               type: "createRoom",
               nickname,
               capacity,
               disconnectGraceSeconds,
+              mode,
               avatar: profile.avatar,
             })
           }
@@ -81,6 +82,13 @@ export function App() {
         />
       ) : (
         <>
+          {room.mode === "augment" && (
+            <div className="mode-label">
+              {
+                "\uC99D\uAC15 \uC57C\uCD94 \u00B7 \uC6B4\uBA85\uC758 \uC8FC\uC0AC\uC704"
+              }
+            </div>
+          )}
           {confirmLeave && (
             <div className="notice leave-confirm" role="alert">
               <span>
@@ -107,6 +115,10 @@ export function App() {
               />
             ) : (
               <GameScreen
+                actionError={error}
+                onAugment={(command) =>
+                  game.action({ type: "augment", command })
+                }
                 motion={game.motion}
                 snapshotEpoch={game.snapshotEpoch}
                 initialTurnIntro={game.liveStart}

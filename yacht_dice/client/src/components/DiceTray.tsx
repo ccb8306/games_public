@@ -42,6 +42,10 @@ type Props = {
   dice: RoomState["dice"];
   held: RoomState["held"];
   disabled: boolean;
+  lockedIndices?: number[];
+  sealedIndices?: number[];
+  bombIndex?: number;
+  maxHeld?: number;
   phase?: RollPhase;
   holdFeedback?: { id: number; indices: number[] } | null;
   onHolds: (held: RoomState["held"]) => void;
@@ -54,9 +58,19 @@ export function DiceTray({
   onHolds,
   phase = "idle",
   holdFeedback,
+  lockedIndices = [],
+  sealedIndices = [],
+  bombIndex,
+  maxHeld = Infinity,
 }: Props) {
   const heldCount = held.filter(Boolean).length;
   function toggle(index: number) {
+    if (
+      disabled ||
+      lockedIndices.includes(index) ||
+      (!held[index] && heldCount >= maxHeld)
+    )
+      return;
     const next: RoomState["held"] = [...held];
     next[index] = !next[index];
     onHolds(next);
@@ -66,7 +80,7 @@ export function DiceTray({
       <div className="dice-tray-heading">
         <span>DICE CUP</span>
         <span>
-          {5 - heldCount}개 굴림 · {heldCount}개 보관
+          {dice.length - heldCount}개 굴림 · {heldCount}개 보관
         </span>
       </div>
       <DiceCup
@@ -77,16 +91,36 @@ export function DiceTray({
         disabled={disabled}
         onSelect={toggle}
       />
-      <div className="dice-dock" role="group" aria-label="주사위 보관 및 해제">
+      <div
+        className="dice-dock"
+        style={{
+          gridTemplateColumns: `repeat(${dice.length}, minmax(${dice.length > 7 ? 58 : 0}px, 1fr))`,
+          overflowX: dice.length > 7 ? "auto" : undefined,
+          maxWidth: "100%",
+        }}
+        role="group"
+        aria-label="주사위 보관 및 해제"
+      >
         {dice.map((value, i) => {
           const displayValue = value;
           return (
             <button
-              className={`die ${held[i] ? "held" : ""}`}
+              className={`die ${held[i] ? "held" : ""} ${bombIndex === i ? "bomb-die" : ""} ${sealedIndices.includes(i) ? "sealed-die" : ""}`}
+              title={
+                bombIndex === i
+                  ? "다시 굴리면 상대 +3점 · 그대로 기록하면 내 점수 -4점"
+                  : sealedIndices.includes(i)
+                    ? "이번 턴 내내 1로 봉인 · 눈 변경과 재굴림 불가"
+                    : undefined
+              }
               key={i}
               aria-label={`${i + 1}번 주사위 ${!held[i] && (phase === "shaking" || phase === "throwing") ? "굴리는 중" : (value ?? "굴리기 전")}${held[i] ? ", 보관 중" : ""}`}
               aria-pressed={held[i]}
-              disabled={disabled}
+              disabled={
+                disabled ||
+                lockedIndices.includes(i) ||
+                (!held[i] && heldCount >= maxHeld)
+              }
               onClick={() => toggle(i)}
             >
               <strong className="die-value" aria-hidden="true">
@@ -124,7 +158,19 @@ export function DiceTray({
                   )}
                 </svg>
               </span>
-              <small>{held[i] ? "보관 중" : value ? "보관하기" : "대기"}</small>
+              <small>
+                {sealedIndices.includes(i)
+                  ? "🔒 1로 봉인"
+                  : bombIndex === i
+                    ? "💣 폭탄"
+                    : lockedIndices.includes(i)
+                      ? "🔒 강제 보관"
+                      : held[i]
+                        ? "보관 중"
+                        : value
+                          ? "보관하기"
+                          : "대기"}
+              </small>
             </button>
           );
         })}

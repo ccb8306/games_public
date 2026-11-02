@@ -1,3 +1,6 @@
+import { augmentPlayerSchema, augmentStateSchema, augmentCommandSchema } from "./augments.js";
+export * from "./augments.js";
+export * from "./augment-game.js";
 import { motionSchema } from "./motion.js";
 export { motionSchema, FACE_ORDER, type Pose, type MotionFrame } from "./motion.js";
 import { z } from "zod";
@@ -57,8 +60,8 @@ export const chatMessageSchema = z.strictObject({
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 const reconnectTokenSchema = z.string().min(32).max(256);
 const dieSchema = z.number().int().min(1).max(6);
-const diceSchema = z.tuple([dieSchema.nullable(), dieSchema.nullable(), dieSchema.nullable(), dieSchema.nullable(), dieSchema.nullable()]);
-const heldSchema = z.tuple([z.boolean(), z.boolean(), z.boolean(), z.boolean(), z.boolean()]);
+const diceSchema = z.array(dieSchema.nullable()).min(4).max(10);
+const heldSchema = z.array(z.boolean()).min(4).max(10);
 
 export const scorecardSchema = z.record(scoreCategorySchema, z.number().int().nonnegative().nullable());
 export type Scorecard = z.infer<typeof scorecardSchema>;
@@ -73,11 +76,14 @@ export const publicPlayerSchema = z.strictObject({
   forfeited: z.boolean().default(false),
   reconnectDeadline: z.number().int().nonnegative().nullable().default(null),
   scores: scorecardSchema,
+  augment: augmentPlayerSchema.optional(),
 });
 export type PublicPlayer = z.infer<typeof publicPlayerSchema>;
 
 export const roomStateSchema = z.strictObject({
   roomId: roomIdSchema,
+  mode: z.enum(["normal", "augment"]).optional(),
+  augment: augmentStateSchema.optional(),
   code: roomCodeSchema,
   phase: z.enum(["waiting", "playing", "finished"]),
   capacity: capacitySchema.default(2),
@@ -86,7 +92,7 @@ export const roomStateSchema = z.strictObject({
   currentPlayerId: playerIdSchema.nullable(),
   dice: diceSchema,
   held: heldSchema,
-  rollCount: z.number().int().min(0).max(3),
+  rollCount: z.number().int().min(0).max(12),
   rollPhase: z.enum(["idle", "shaking", "throwing"]),
   motion: motionSchema.nullable().optional(),
   revision: revisionSchema,
@@ -97,6 +103,7 @@ export const roomStateSchema = z.strictObject({
     z.strictObject({ kind: z.literal("abandoned"), reason: z.literal("disconnect") }),
   ]).nullable(),
 }).superRefine((room, ctx) => {
+  if(room.dice.length!==room.held.length || (!room.augment && (room.dice.length!==5 || room.rollCount>3)))ctx.addIssue({code:"custom",message:"모드에 맞지 않는 주사위 상태입니다."});
   if (room.players.length !== room.capacity) ctx.addIssue({ code: "custom", message: "정원과 자리 수가 다릅니다." });
   const ids = new Set<string>();
   room.players.forEach((player, slot) => {
@@ -116,7 +123,7 @@ const roomActionBase = {
 export const clientMessageSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("clock"), requestId: requestIdSchema, sentAt: z.number().finite() }),
   z.strictObject({ type: z.literal("sendChat"), requestId: requestIdSchema, roomId: roomIdSchema, text: chatTextSchema }),
-  z.strictObject({ type: z.literal("createRoom"), requestId: requestIdSchema, nickname: nicknameSchema, avatar: avatarSchema.optional(), capacity: capacitySchema.optional(), disconnectGraceSeconds: disconnectGraceSchema.optional() }),
+  z.strictObject({ type: z.literal("createRoom"), requestId: requestIdSchema, nickname: nicknameSchema, avatar: avatarSchema.optional(), capacity: capacitySchema.optional(), mode: z.enum(["normal", "augment"]).optional(), disconnectGraceSeconds: disconnectGraceSchema.optional() }),
   z.strictObject({ type: z.literal("joinRoom"), requestId: requestIdSchema, code: roomCodeSchema, nickname: nicknameSchema, avatar: avatarSchema.optional() }),
   z.strictObject({ type: z.literal("resumeRoom"), requestId: requestIdSchema, code: roomCodeSchema, token: reconnectTokenSchema }),
   z.strictObject({ type: z.literal("setReady"), ...roomActionBase, ready: z.boolean() }),
@@ -125,6 +132,7 @@ export const clientMessageSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("setHolds"), ...roomActionBase, held: heldSchema }),
   z.strictObject({ type: z.literal("score"), ...roomActionBase, category: scoreCategorySchema }),
   z.strictObject({ type: z.literal("leaveRoom"), ...roomActionBase }),
+  z.strictObject({ type: z.literal("augment"), ...roomActionBase, command: augmentCommandSchema }),
 ]);
 export type ClientMessage = z.infer<typeof clientMessageSchema>;
 
@@ -188,3 +196,5 @@ export function decodeClientMessage(raw: string): DecodeResult<ClientMessage> {
 export function decodeServerMessage(raw: string): DecodeResult<ServerMessage> {
   return decodeMessage(raw, serverMessageSchema, MAX_SERVER_MESSAGE_BYTES);
 }
+
+export { blockedCategory, goldDisabled, flashEligible, flashTargets } from "./flash.js";

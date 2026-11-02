@@ -77,7 +77,7 @@ export class Simulation {
       seed === undefined
         ? () => randomInt(0x100000000) / 0x100000000
         : seededRandom(seed);
-    this.physics = createDicePhysics(this.random);
+    this.physics = createDicePhysics(this.random, held.length);
     previousPoses?.forEach((pose, i) => {
       const body = this.physics.bodies[i]!;
       body.position.set(...pose.p);
@@ -138,10 +138,10 @@ export class Simulation {
     if (
       this.still >= 0.6 &&
       this.throwTime >= 3 + this.windCount * 2 &&
-      this.windCount < 3
+      this.windCount < (this.held.length > 7 ? 6 : 3)
     )
       this.blow();
-    if (this.throwTime >= 10) this.failed = true;
+    if (this.throwTime >= (this.held.length > 7 ? 18 : 10)) this.failed = true;
   }
   blow() {
     this.windCount++;

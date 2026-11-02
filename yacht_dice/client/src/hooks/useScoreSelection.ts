@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   categoryScore,
+  scorePreview,
   type RoomState,
   type ScoreCategory,
 } from "@yacht/shared";
@@ -76,16 +77,31 @@ export function useScoreSelection({
     !submitting &&
     !paused &&
     !interactionLocked &&
+    !room.augment?.drafting &&
+    !room.augment?.turn.pending &&
+    !room.augment?.turn.chooseOld &&
     room.rollPhase === "idle";
   const dice = room.dice.every((die): die is number => die !== null)
     ? room.dice
     : null;
-  const canScore = canPlay && room.rollCount > 0 && !!dice && !!player;
+  const canScore =
+    canPlay &&
+    !room.augment?.turn.fork &&
+    !room.augment?.turn.oldWorld &&
+    !room.augment?.turn.reroll &&
+    room.rollCount > 0 &&
+    !!dice &&
+    !!player;
   const selected =
     selection?.scope === scope && player?.scores[selection.category] === null
       ? selection.category
       : null;
-  const preview = selected && dice ? categoryScore(selected, dice) : null;
+  const preview =
+    selected && dice
+      ? room.augment && player
+        ? scorePreview(room, player, selected)
+        : categoryScore(selected, dice)
+      : null;
 
   function select(category: ScoreCategory) {
     if (canScore && !locked.current && player?.scores[category] === null)

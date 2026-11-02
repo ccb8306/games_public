@@ -40,7 +40,10 @@ export function qualifications(
 ): Qualification[] {
   const candidates = SCORE_CATEGORIES.slice(6)
     .filter((category) => scores[category] === null)
-    .map((category) => ({ category, score: categoryScore(category, dice) }))
+    .map((category) => ({
+      category,
+      score: categoryScore(category, dice),
+    }))
     .filter((candidate) => candidate.score > 0);
   const maximum = Math.max(
     0,

@@ -17,7 +17,7 @@ export const motionSchema = z.strictObject({
   seq: z.number().int().nonnegative(),
   at: z.number().finite(),
   phase: z.enum(["shaking", "throwing", "rest"]),
-  dice: z.array(poseSchema).length(5),
+  dice: z.array(poseSchema).min(4).max(10),
   cup: poseSchema.nullable(),
   wind: z.boolean(),
   windDirection: z.number().int().min(0).max(7).optional(),

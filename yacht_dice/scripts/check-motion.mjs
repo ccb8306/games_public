@@ -5,7 +5,7 @@ const {chromium}=await import(process.argv[2]??"playwright");
 const app=createApp();await new Promise(r=>app.server.listen(0,"127.0.0.1",r));
 let browser;
 try {
- browser=await chromium.launch({headless:true,args:["--enable-unsafe-swiftshader"]});
+ browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL,args:["--enable-unsafe-swiftshader"]});
  const errors=[],pages=[];
  for(const [i,width] of [1440,390,1366,780].entries()) {
    const p=await browser.newPage({viewport:{width,height:900}});pages.push(p);

@@ -1,3 +1,6 @@
+import { AugmentPanel } from "../components/AugmentPanel";
+import { RoundEventBanner } from "../components/RoundEventBanner";
+import type { AugmentCommand } from "@yacht/shared";
 import type { MotionStream } from "../dice/motion";
 import { useEffect, useState } from "react";
 import {
@@ -13,6 +16,8 @@ import { DiceTray } from "../components/DiceTray";
 import { ScoreTable } from "../components/ScoreTable";
 import { ResultScreen } from "./ResultScreen";
 type Props = {
+  actionError?: string;
+  onAugment?: (command: AugmentCommand) => void;
   motion?: MotionStream;
   room: RoomState;
   playerId?: string;
@@ -27,6 +32,8 @@ type Props = {
   onLeave: () => void;
 };
 export function GameScreen({
+  actionError,
+  onAugment,
   motion,
   room,
   playerId,
@@ -59,15 +66,31 @@ export function GameScreen({
   const [now, setNow] = useState(Date.now());
   const canThrow =
     myTurn && connected && !paused && !busy && room.rollPhase === "shaking";
+  const raidable = room.players.find((p) => p?.id === room.currentPlayerId)
+    ?.augment?.curse;
+  const canRaidHeld =
+    raidable?.id === "inspection" &&
+    !raidable.resolved &&
+    room.rollCount === 1 &&
+    room.held.some(
+      (v, i) =>
+        v &&
+        room.augment?.turn.locked !== i &&
+        !room.augment?.turn.fixed?.includes(i),
+    );
   const canShake =
     canPlay &&
+    !room.augment?.turn.flags.includes("final") &&
+    !room.augment?.turn.chooseOld &&
     !feedback.locked &&
     room.rollPhase === "idle" &&
-    room.rollCount < 3 &&
-    !room.held.every(Boolean);
+    (room.rollCount < (room.augment?.turn.maxRolls ?? 3) ||
+      !!room.augment?.turn.reroll) &&
+    (!room.held.every(Boolean) || canRaidHeld);
   useEffect(() => {
     function throwWithSpace(event: KeyboardEvent) {
       if (
+        document.querySelector('[role="dialog"], dialog[open]') ||
         (!canThrow && !canShake) ||
         (event.code !== "Space" && event.key !== " ") ||
         event.repeat ||
@@ -100,6 +123,7 @@ export function GameScreen({
   const next = room.players.find((p) => p?.id === nextId);
   return (
     <div className="game-grid">
+      <RoundEventBanner room={room} />
       <ScoreTable
         qualifications={feedback.combos}
         recorded={feedback.recorded}
@@ -179,7 +203,35 @@ export function GameScreen({
               holdFeedback={feedback.holds}
               dice={room.dice}
               held={room.held}
-              disabled={!canPlay || !room.rollCount || room.rollCount === 3}
+              sealedIndices={room.augment?.turn.sealed}
+              bombIndex={
+                current?.augment?.curse?.active &&
+                current.augment.curse.id === "receipt" &&
+                !current.augment.curse.resolved
+                  ? current.augment.curse.die
+                  : undefined
+              }
+              lockedIndices={[
+                ...(room.augment?.turn.fixed ?? []),
+                ...(room.augment?.turn.locked != null
+                  ? [room.augment.turn.locked]
+                  : []),
+              ]}
+              maxHeld={
+                current?.augment?.curse?.active
+                  ? current.augment.curse.id === "butterFingers"
+                    ? 1
+                    : current.augment.curse.id === "handsUp"
+                      ? 2
+                      : undefined
+                  : undefined
+              }
+              disabled={
+                !canPlay ||
+                !!room.augment?.turn.fork ||
+                !room.rollCount ||
+                room.rollCount >= (room.augment?.turn.maxRolls ?? 3)
+              }
               onHolds={onHolds}
             />
             <p className="dice-hint">
@@ -190,7 +242,7 @@ export function GameScreen({
                 : feedback.phase === "throwing"
                   ? "컵을 뒤집어 주사위를 쏟고 있어요…"
                   : myTurn
-                    ? room.rollCount < 3
+                    ? room.rollCount < (room.augment?.turn.maxRolls ?? 3)
                       ? "흔들기 버튼 또는 스페이스바로 시작하세요."
                       : room.rollCount
                         ? "주사위나 아래 슬롯을 눌러 보관 · 다시 눌러 해제"
@@ -202,15 +254,18 @@ export function GameScreen({
                 <button
                   className="primary roll"
                   disabled={
-                    !canPlay ||
+                    !canShake ||
                     feedback.locked ||
                     room.rollPhase !== "idle" ||
-                    room.rollCount === 3 ||
-                    room.held.every(Boolean)
+                    (room.held.every(Boolean) && !canRaidHeld)
                   }
                   onClick={onStartShake}
                 >
-                  흔들기 <span>{3 - room.rollCount}회 남음 · Space</span>
+                  흔들기{" "}
+                  <span>
+                    {(room.augment?.turn.maxRolls ?? 3) - room.rollCount}회 남음
+                    · Space
+                  </span>
                 </button>
                 <button
                   className="primary throw"
@@ -225,7 +280,8 @@ export function GameScreen({
               <div className="opponent-turn" role="status">
                 <strong>{current?.nickname ?? "상대방"}님의 턴입니다</strong>
                 <span>
-                  주사위와 점수를 함께 보고 있어요 · {3 - room.rollCount}회 남음
+                  주사위와 점수를 함께 보고 있어요 ·{" "}
+                  {(room.augment?.turn.maxRolls ?? 3) - room.rollCount}회 남음
                 </span>
               </div>
             )}
@@ -239,6 +295,17 @@ export function GameScreen({
           eventKey={feedback.eventKey}
         />
       </section>
+      {room.augment && onAugment && room.phase !== "finished" && (
+        <section className="augment-sidebar panel" aria-label="증강과 난장판">
+          <AugmentPanel
+            error={actionError}
+            room={room}
+            playerId={playerId}
+            disabled={!connected || busy || paused || room.rollPhase !== "idle"}
+            onCommand={onAugment}
+          />
+        </section>
+      )}
     </div>
   );
 }

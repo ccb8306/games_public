@@ -193,9 +193,9 @@ export function createDiceScene(
     materials.push(mat);
     return mat;
   });
-  const diceMeshes = Array.from({ length: 5 }, () =>
-    mesh(new RoundedBoxGeometry(0.9, 0.9, 0.9, 3, 0.08), diceMaterials),
-  );
+  const makeDie = () =>
+    mesh(new RoundedBoxGeometry(0.9, 0.9, 0.9, 3, 0.08), diceMaterials);
+  const diceMeshes = Array.from({ length: 5 }, makeDie);
   let view: DiceView = {
     dice: [null, null, null, null, null],
     held: [false, false, false, false, false],
@@ -239,6 +239,7 @@ export function createDiceScene(
       const show = !motion.matches || discrete.phase === "rest";
       if (show) {
         diceMeshes.forEach((m, i) => {
+          if (!a.dice[i] || !b.dice[i]) return;
           applyPose(m, a.dice[i]!, b.dice[i]!, fraction);
           m.visible =
             !view.held[i] &&
@@ -353,6 +354,14 @@ export function createDiceScene(
         unsubscribe = next.motion?.subscribe(request);
       }
       view = next;
+      cup.scale.set(
+        next.dice.length > 8 ? 1.25 : 1,
+        1,
+        next.dice.length > 8 ? 1.25 : 1,
+      );
+      while (diceMeshes.length < next.dice.length) diceMeshes.push(makeDie());
+      while (diceMeshes.length > next.dice.length)
+        table.remove(diceMeshes.pop()!);
       request();
     },
     dispose() {

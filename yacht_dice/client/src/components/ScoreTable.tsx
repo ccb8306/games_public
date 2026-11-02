@@ -1,9 +1,13 @@
 import { useRef, type ReactNode } from "react";
 import { AvatarImage } from "./AvatarImage";
+import { PlayerAugments } from "./PlayerAugments";
 import {
   SCORE_CATEGORIES,
   categoryScore,
   totals,
+  playerTotals,
+  scorePreview,
+  blockedCategory,
   type RoomState,
   type ScoreCategory,
 } from "@yacht/shared";
@@ -59,6 +63,8 @@ export function ScoreTable({
           ) : p?.id === playerId && canScore && dice ? (
             <button
               className="preview-score"
+              disabled={blockedCategory(p, category)}
+              title={blockedCategory(p, category) ? "이번 턴 봉인된 족보" : ""}
               onClick={() => onSelect(category)}
               onPointerDown={(event) => {
                 inputType.current = event.pointerType;
@@ -74,9 +80,11 @@ export function ScoreTable({
                   onQuickConfirm?.(category);
               }}
               aria-pressed={selected === category}
-              aria-label={`${SCORE_LABELS[category]} ${categoryScore(category, dice)}점 선택`}
+              aria-label={`${SCORE_LABELS[category]} ${room.augment ? scorePreview(room, p, category) : categoryScore(category, dice)}점 선택`}
             >
-              {categoryScore(category, dice)}
+              {room.augment
+                ? scorePreview(room, p, category)
+                : categoryScore(category, dice)}
             </button>
           ) : p?.id === room.currentPlayerId &&
             qualifications.some((q) => q.category === category) ? (
@@ -118,6 +126,12 @@ export function ScoreTable({
                           ? "나"
                           : "참가자"}
                   </small>
+                  {room.augment && (
+                    <PlayerAugments
+                      player={p}
+                      turn={room.augment.turn.serial}
+                    />
+                  )}
                 </th>
               ))}
             </tr>
@@ -127,14 +141,14 @@ export function ScoreTable({
             <tr>
               <th scope="row">보너스 (35)</th>
               {players.map((p, i) => (
-                <td key={i}>+{p ? totals(p.scores).bonus : 0}</td>
+                <td key={i}>+{p ? playerTotals(p).bonus : 0}</td>
               ))}
             </tr>
             <tr className="subtotal">
               <th scope="row">상단 합계</th>
               {players.map((p, i) => (
                 <td key={i}>
-                  {p ? totals(p.scores).upper : 0}
+                  {p ? playerTotals(p).upper : 0}
                   <small> / 63</small>
                 </td>
               ))}
@@ -155,10 +169,18 @@ export function ScoreTable({
             </tr>
           </tbody>
           <tbody className="score-group total-group" aria-label="총점">
+            {room.augment && (
+              <tr>
+                <th>{"\uC99D\uAC15 \u00B1"}</th>
+                {players.map((p) => (
+                  <td key={p.id}>{p.augment?.bonus ?? 0}</td>
+                ))}
+              </tr>
+            )}
             <tr className="total">
               <th scope="row">총점</th>
               {players.map((p, i) => (
-                <td key={i}>{p ? totals(p.scores).total : 0}</td>
+                <td key={i}>{p ? playerTotals(p).total : 0}</td>
               ))}
             </tr>
           </tbody>

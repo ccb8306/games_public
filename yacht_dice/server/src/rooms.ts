@@ -1,3 +1,4 @@
+import { afterAugmentRoll, reconcileAugment } from "@yacht/shared";
 import { PhysicsPool } from "./physics-pool.js";
 import type { PhysicsEvent } from "./physics-worker.js";
 import { completeRoll, type MotionFrame } from "@yacht/shared";
@@ -9,7 +10,7 @@ import { applyGameAction, decodeClientMessage, emptyScorecard, type RoomState, t
 type Session = { room: Room; playerId: string };
 type Room = {
   state: RoomState;
-  physicsJob?: { id: string; actor: string; before: RoomState["motion"]; deadline?: number };
+  physicsJob?: { id: string; actor: string; before: RoomState["motion"]; deadline?: number; autoAt?: number };
   tokens: Map<string, string>;
   sockets: Map<string, WebSocket>;
   deadlines: Map<string, number>;
@@ -61,6 +62,16 @@ export class Rooms {
       }
     }
   }
+  private startPhysics(room: Room, playerId: string) {
+    const id = randomUUID();
+    room.physicsJob = { id, actor:playerId, before:room.state.motion };
+    if (room.state.augment?.turn.reroll?.id === "practice") room.physicsJob.autoAt = this.now() + 500;
+    room.state.motion = {
+      id, seq:0, at:Date.now(), phase:"shaking", wind:false, paused:false, cup:null,
+      dice:room.state.motion?.dice ?? Array.from({length:room.state.dice.length},()=>({p:[0,0.48,0] as [number,number,number],q:[0,0,0,1] as [number,number,number,number]})),
+    };
+    this.physics.send({type:"start",roomId:room.state.roomId,id,held:room.state.held,dice:room.state.dice,poses:room.physicsJob.before?.dice});
+  }
   private physicalEvent(event: PhysicsEvent) {
     const room = [...this.rooms.values()].find(r => r.state.roomId === event.roomId);
     if (!room || room.physicsJob?.id !== event.id || room.state.currentPlayerId !== room.physicsJob.actor || room.state.phase !== "playing") return;
@@ -78,6 +89,7 @@ export class Rooms {
     }
     if (event.type === "done") {
       room.state = completeRoll(room.state,event.dice,event.frame);
+      if(room.state.augment) afterAugmentRoll(room.state, randomInt);
     } else {
       room.state.motion = room.physicsJob.before ?? null;
       room.state.rollPhase = "idle";
@@ -86,6 +98,9 @@ export class Rooms {
       console.warn("physics_failed", {roomId:event.roomId,rollId:event.id});
     }
     room.physicsJob = undefined;
+    if(event.type==='done'&&room.state.rollPhase==='shaking'&&room.state.augment?.turn.reroll?.id==='practice'){
+      this.startPhysics(room,room.state.currentPlayerId!);
+    }
     this.broadcast(room);
   }
   private attach(ws: WebSocket, room: Room, playerId: string, requestId: string) {
@@ -124,7 +139,7 @@ export class Rooms {
         let code: string;
         do { code = randomBytes(4).toString("hex").toUpperCase(); } while (this.rooms.has(code));
         const room: Room = {
-          state: { roomId: randomUUID(), code, capacity: msg.capacity ?? 2, disconnectGraceSeconds: msg.disconnectGraceSeconds ?? this.graceMs / 1000, phase: "waiting", players: Array.from({ length: msg.capacity ?? 2 }, () => null), currentPlayerId: null, dice: [null, null, null, null, null], held: [false, false, false, false, false], rollCount: 0, rollPhase: "idle", revision: 0, reconnectDeadline: null, outcome: null },
+          state: { mode: msg.mode ?? "normal", roomId: randomUUID(), code, capacity: msg.capacity ?? 2, disconnectGraceSeconds: msg.disconnectGraceSeconds ?? this.graceMs / 1000, phase: "waiting", players: Array.from({ length: msg.capacity ?? 2 }, () => null), currentPlayerId: null, dice: [null, null, null, null, null], held: [false, false, false, false, false], rollCount: 0, rollPhase: "idle", revision: 0, reconnectDeadline: null, outcome: null },
           tokens: new Map(), sockets: new Map(), deadlines: new Map(), expired: new Set(), history: new Map(), inactiveSince: null, finishedAt: null,
           chat: [], chatTimes: new Map(), chatRequests: new Map(),
         };
@@ -221,16 +236,12 @@ export class Rooms {
         const error: ServerMessage = { type: "rejected", requestId: msg.requestId, code: result.code, message: result.message };
         history.set(msg.requestId, error); this.send(ws, error); return;
       }
+      const previousPhase=room.state.rollPhase;
       room.state = result.state;
-      if (msg.type === "startShake") {
-        const id = randomUUID();
-        room.physicsJob = { id, actor:playerId, before:room.state.motion };
-        room.state.motion = {
-          id, seq:0, at:Date.now(), phase:"shaking", wind:false, paused:false, cup:null,
-          dice:room.state.motion?.dice ?? Array.from({length:5},()=>({p:[0,0.48,0] as [number,number,number],q:[0,0,0,1] as [number,number,number,number]})),
-        };
-        this.physics.send({type:"start",roomId:room.state.roomId,id,held:room.state.held,dice:room.state.dice,poses:room.physicsJob.before?.dice});
+      if (room.state.rollPhase === "shaking" && previousPhase !== "shaking") {
+        this.startPhysics(room,playerId);
       } else if (msg.type === "roll" && room.physicsJob) {
+        room.physicsJob.autoAt=undefined;
         room.physicsJob.deadline = this.now() + 20_000;
         this.physics.send({type:"stop",roomId:room.state.roomId,id:room.physicsJob.id});
       }
@@ -256,12 +267,17 @@ export class Rooms {
     this.broadcast(room);
   }
   private settle(room: Room) {
+    if(room.state.augment) reconcileAugment(room.state,randomInt);
     settleGame(room.state);
     if (room.state.phase === "finished") { room.state.currentPlayerId = null; room.deadlines.clear(); }
   }
   tick() {
     const now = this.now();
     for (const [code, room] of this.rooms) {
+      if(room.physicsJob?.autoAt && now>=room.physicsJob.autoAt && room.state.players.every(p=>!p||p.forfeited||p.connected)){
+        room.physicsJob.autoAt=undefined;room.physicsJob.deadline=now+20000;room.state.rollPhase='throwing';room.state.revision++;
+        this.physics.send({type:'stop',roomId:room.state.roomId,id:room.physicsJob.id});this.broadcast(room);
+      }
       if (room.physicsJob?.deadline && now >= room.physicsJob.deadline) {
         const id = room.physicsJob.id;
         this.physics.send({type:"cancel",roomId:room.state.roomId,id});
