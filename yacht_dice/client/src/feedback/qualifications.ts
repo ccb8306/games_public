@@ -18,9 +18,9 @@ export type RecordedScore = {
 };
 export type RollPhase = "idle" | "shaking" | "throwing" | "result";
 export const FEEDBACK_TIMING = {
-  throw: 500,
+  throw: 150,
   turnIntro: 500,
-  result: 1600,
+  result: 2800,
   recorded: 1200,
   hold: 300,
 } as const;
@@ -40,7 +40,10 @@ export function qualifications(
 ): Qualification[] {
   const candidates = SCORE_CATEGORIES.slice(6)
     .filter((category) => scores[category] === null)
-    .map((category) => ({ category, score: categoryScore(category, dice) }))
+    .map((category) => ({
+      category,
+      score: categoryScore(category, dice),
+    }))
     .filter((candidate) => candidate.score > 0);
   const maximum = Math.max(
     0,

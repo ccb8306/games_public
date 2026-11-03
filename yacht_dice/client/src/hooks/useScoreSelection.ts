@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   categoryScore,
+  scoreBreakdown,
+  blockedCategory,
   type RoomState,
   type ScoreCategory,
 } from "@yacht/shared";
@@ -76,23 +78,55 @@ export function useScoreSelection({
     !submitting &&
     !paused &&
     !interactionLocked &&
-    room.rollPhase !== "shaking";
+    !room.augment?.drafting &&
+    !room.augment?.turn.pending &&
+    !room.augment?.turn.chooseOld &&
+    room.rollPhase === "idle";
   const dice = room.dice.every((die): die is number => die !== null)
     ? room.dice
     : null;
-  const canScore = canPlay && room.rollCount > 0 && !!dice && !!player;
+  const canScore =
+    canPlay &&
+    !room.augment?.turn.fork &&
+    !room.augment?.turn.oldWorld &&
+    !room.augment?.turn.reroll &&
+    !room.augment?.turn.flags.includes("loanDoublePending") &&
+    room.rollCount > 0 &&
+    !!dice &&
+    !!player;
   const selected =
     selection?.scope === scope && player?.scores[selection.category] === null
       ? selection.category
       : null;
-  const preview = selected && dice ? categoryScore(selected, dice) : null;
+  const breakdown =
+    selected && room.augment && player
+      ? scoreBreakdown(room, player, selected)
+      : null;
+  const preview =
+    selected && dice
+      ? room.augment && player
+        ? (breakdown?.recorded ?? null)
+        : categoryScore(selected, dice)
+      : null;
 
   function select(category: ScoreCategory) {
-    if (canScore && !locked.current && player?.scores[category] === null)
+    if (
+      canScore &&
+      !locked.current &&
+      player?.scores[category] === null &&
+      !blockedCategory(player, category) &&
+      (!room.augment || scoreBreakdown(room, player, category))
+    )
       setSelection({ category, scope });
   }
   function confirm(category: ScoreCategory) {
-    if (!canScore || locked.current || player?.scores[category] !== null)
+    if (
+      !canScore ||
+      locked.current ||
+      player?.scores[category] !== null ||
+      blockedCategory(player, category) ||
+      (room.augment && !scoreBreakdown(room, player, category))
+    )
       return;
     // Both button and double-click use this path, including before React rerenders.
     locked.current = true;
@@ -101,7 +135,9 @@ export function useScoreSelection({
     onScore(category);
   }
 
-  let reason = "기록할 점수를 선택하세요.";
+  let reason = room.augment
+    ? "기본(증강) 표기 · 괄호의 점수는 상단 63점 조건에서 제외돼요."
+    : "기록할 점수를 선택하세요.";
   if (room.phase === "finished") reason = "경기가 종료되었습니다.";
   else if (!connected) reason = "서버에 다시 연결하고 있습니다.";
   else if (paused) reason = "플레이어의 재접속을 기다리고 있습니다.";
@@ -111,6 +147,10 @@ export function useScoreSelection({
   else if (room.rollPhase === "shaking")
     reason = "흔들기를 멈추면 점수를 선택할 수 있어요.";
   else if (!room.rollCount) reason = "먼저 주사위를 굴려주세요.";
+  else if (room.augment?.turn.flags.includes("loanDoublePending"))
+    reason = "두 배 승부의 추가 굴림을 먼저 완료하세요.";
+  else if (selected && room.augment && !breakdown)
+    reason = "이 칸은 현재 기록할 수 없어요.";
   else if (selected && preview !== null)
     reason =
       preview === 0
@@ -124,6 +164,7 @@ export function useScoreSelection({
     canScore,
     selected,
     preview,
+    breakdown,
     reason,
     select,
     confirm,

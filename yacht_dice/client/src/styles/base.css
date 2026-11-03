@@ -18,6 +18,8 @@
 body {
   margin: 0;
   min-width: 320px;
+  min-height: 100dvh;
+  background: radial-gradient(ellipse at 80% 0%, #284f3e55, transparent 65%);
 }
 
 button,
@@ -29,7 +31,7 @@ button {
   cursor: pointer;
   border: 1px solid #3d5564;
   border-radius: 10px;
-  background: #233644;
+  background: #244137;
   color: #edf6fa;
   padding: 0.7rem 1.1rem;
   font-weight: 650;
@@ -39,7 +41,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: #344c5a;
+  background: #345749;
 }
 
 button:active:not(:disabled) {
@@ -63,8 +65,8 @@ input {
   width: 100%;
   min-width: 0;
   color: var(--color-text);
-  border: 1px solid #405666;
-  background: #101e2a;
+  border: 1px solid #456255;
+  background: #0e241e;
   border-radius: 9px;
   padding: 0.85rem;
 }

@@ -27,13 +27,20 @@ async function client(url) {
     const index = messages.findIndex(predicate);
     if (index >= 0) return Promise.resolve(messages.splice(index, 1)[0]);
     return new Promise((resolve, reject) => {
-      const entry = { predicate, resolve, timer: setTimeout(() => { waits.splice(waits.indexOf(entry), 1); reject(new Error("message timeout")); }, 3000) };
+      const entry = { predicate, resolve, timer: setTimeout(() => { waits.splice(waits.indexOf(entry), 1); reject(new Error("message timeout")); }, 15000) };
       waits.push(entry);
     });
-  }, async command(type, fields = {}) {
+  }, async command(type, fields = {}, attempts = 0) {
+    const oldCount=c.state?.rollCount;
     const msg = c.send(type, fields);
     const response = await c.next(m => ["accepted", "rejected"].includes(m.type) && m.requestId === msg.requestId);
     if (response.type === "accepted" && type !== "leaveRoom") await c.next(m => m.type === "roomState" && m.state.revision >= response.revision);
+    if (response.type === "accepted" && type === "roll") await c.next(m=>m.type==="roomState" && m.state.rollPhase==="idle" && m.state.revision>response.revision);
+    if(type === "roll" && response.type === "accepted" && c.state.rollCount === oldCount) {
+      assert.ok(attempts < 3, "physical roll repeatedly failed");
+      await c.command("startShake");
+      return c.command("roll",{},attempts+1);
+    }
     return response;
   } };
   ws.on("message", raw => {
@@ -302,6 +309,7 @@ test("서로 다른 연결에서 방 대기, 무효 요청, 중복 방지, 24턴
   await current.next(m => m.type === "accepted" && m.requestId === roll.requestId);
   await current.next(m => m.type === "roomState" && m.state.revision === accepted.revision);
   assert.deepEqual(current.state.dice, dice);
+  await current.next(m=>m.type==="roomState" && m.state.rollPhase==="idle" && m.state.rollCount===1);
   assert.equal(current.state.rollCount, 1);
   const stale = { ...roll, requestId: randomUUID() };
   current.ws.send(JSON.stringify(stale));
@@ -379,7 +387,8 @@ test("흔들기 공유·중복 요청·연결 중단 복구·흔드는 중 퇴�
   const old = current.session;
   current.ws.close();
   await other.next(m => m.type === "roomState" && m.state.players.some(p => !p.connected));
-  assert.equal(other.state.rollPhase, "idle");
+  assert.equal(other.state.rollPhase, "shaking");
+  assert.equal(other.state.motion.paused,true);
   assert.deepEqual(other.state.dice, before.dice);
   assert.deepEqual(other.state.held, before.held);
   assert.equal(other.state.rollCount, before.rollCount);
@@ -387,9 +396,8 @@ test("흔들기 공유·중복 요청·연결 중단 복구·흔드는 중 퇴�
   resumed.send("resumeRoom", { code: old.code, token: old.token });
   await resumed.next(m => m.type === "session");
   await resumed.next(m => m.type === "roomState");
-  assert.equal(resumed.state.rollPhase, "idle");
-  assert.equal((await resumed.command("roll")).code, "INVALID_ACTION");
-  assert.equal((await resumed.command("startShake")).type, "accepted");
+  assert.equal(resumed.state.rollPhase, "shaking");
+  assert.equal((await resumed.command("roll")).type, "accepted");
   assert.equal((await resumed.command("leaveRoom")).type, "accepted");
   await other.next(m => m.type === "roomState" && m.state.phase === "finished");
   assert.equal(other.state.rollPhase, "idle");

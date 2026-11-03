@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { categoryScore, totals, emptyScorecard, applyGameAction, SCORE_CATEGORIES, roomStateSchema } from "../dist/index.js";
+import { completeRoll, categoryScore, totals, emptyScorecard, applyGameAction, SCORE_CATEGORIES, roomStateSchema } from "../dist/index.js";
 
 function initial() {
   return { roomId: randomUUID(), code: "ABC12345", phase: "waiting", players: [0, 1].map(slot => ({ id: randomUUID(), slot, nickname: `P${slot}`, connected: true, ready: false, scores: emptyScorecard() })), currentPlayerId: null, dice: [null, null, null, null, null], held: [false, false, false, false, false], rollCount: 0, rollPhase: "idle", revision: 0, reconnectDeadline: null, outcome: null };
@@ -17,7 +17,15 @@ function started() {
 
 function shakeAndRoll(state, player, rng = () => 2) {
   const start = action(state, player, "startShake");
-  return start.ok ? action(start.state, player, "roll", {}, rng) : start;
+  if (!start.ok) return start;
+  const result = action(start.state, player, "roll");
+  return result.ok ? {ok:true,state:physicalResult(result.state,rng)} : result;
+}
+
+function physicalResult(state, rng=()=>2) {
+  const frame={id:randomUUID(),seq:1,at:Date.now(),phase:"rest",dice:Array.from({length:5},()=>({p:[0,.48,0],q:[0,0,0,1]})),cup:null,wind:false,paused:false};
+  state={...state,motion:frame};
+  return completeRoll(state,state.dice.map((d,i)=>state.held[i]?d:rng(6)+1),frame);
 }
 
 test("흔들기는 난수와 횟수를 소비하지 않고 멈춤만 게임 행동으로 허용한다", () => {
@@ -35,7 +43,11 @@ test("흔들기는 난수와 횟수를 소비하지 않고 멈춤만 게임 행�
   assert.equal(action(state, actor, "setHolds", { held: [true, false, false, false, false] }).ok, false);
   assert.equal(action(state, actor, "score", { category: "choice" }).ok, false);
   state = action(state, actor, "roll", {}, () => { calls++; return 4; }).state;
-  assert.equal(calls, 5);
+  assert.equal(calls, 0);
+  assert.equal(state.rollPhase,"throwing");
+  assert.equal(state.rollCount,0);
+  assert.equal(action(state,actor,"score",{category:"choice"}).ok,false);
+  state=physicalResult(state,()=>4);
   assert.equal(state.rollPhase, "idle");
   assert.equal(state.rollCount, 1);
   assert.equal(action(state, actor, "roll").ok, false);

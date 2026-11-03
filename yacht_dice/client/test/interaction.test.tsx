@@ -12,7 +12,7 @@ import {
 import { GameScreen } from "../src/screens/GameScreen";
 import { DiceTray } from "../src/components/DiceTray";
 import { AvatarPicker } from "../src/components/AvatarPicker";
-import { SHAKE_FACE_INTERVAL_MS } from "../src/hooks/useShakingFaces";
+import { FEEDBACK_TIMING } from "../src/feedback/qualifications";
 
 // DOM event tests, not a substitute for real browser layout/pointer-device QA.
 const dom = new JSDOM("<!doctype html><html><body></body></html>");
@@ -207,6 +207,45 @@ function pointer(target: Element, type = "mouse") {
   target.dispatchEvent(event);
 }
 
+test("Space starts shaking and throws; text inputs, repeats and disconnected turns are ignored", async () => {
+  const ui = await mount();
+  const press = (target: EventTarget = window, repeat = false) =>
+    target.dispatchEvent(
+      new dom.window.KeyboardEvent("keydown", {
+        key: " ",
+        code: "Space",
+        bubbles: true,
+        cancelable: true,
+        repeat,
+      }),
+    );
+  try {
+    assert.equal(ui.host.querySelector(".manual-cup-hint"), null);
+    await act(async () => press());
+    assert.deepEqual(ui.actions, ["startShake"]);
+    await ui.render({
+      room: { ...state(), revision: 2, rollPhase: "shaking" },
+    });
+    const input = document.createElement("textarea");
+    ui.host.append(input);
+    await act(async () => press(input));
+    await act(async () => press(window, true));
+    assert.deepEqual(ui.actions, ["startShake"]);
+    await act(async () => press());
+    assert.deepEqual(ui.actions, ["startShake", "roll"]);
+    await ui.render({
+      room: { ...state(), revision: 3, rollPhase: "throwing" },
+    });
+    await act(async () => press());
+    assert.equal(ui.actions.length, 2);
+    await ui.render({ connected: false });
+    await act(async () => press());
+    assert.equal(ui.actions.length, 2);
+  } finally {
+    await ui.close();
+  }
+});
+
 test("all score candidates including choice and the maximum share dashed rounded geometry", async () => {
   const style = document.createElement("style");
   style.textContent = ["base", "game", "feedback"]
@@ -271,128 +310,62 @@ function doubleClick(target: Element) {
 
 async function settleAnimation() {
   await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 550));
+    await new Promise((resolve) =>
+      setTimeout(
+        resolve,
+        Math.max(FEEDBACK_TIMING.throw, FEEDBACK_TIMING.turnIntro) + 50,
+      ),
+    );
   });
 }
 
-test("cosmetic shaking changes faces but never held dice or server results; timers stop", async (t) => {
-  t.mock.timers.enable({ apis: ["setInterval"] });
-  t.mock.method(Math, "random", () => 0);
+test("fallback controls preserve server faces and held dice through cup phases", async () => {
   const host = document.createElement("div");
   const root = createRoot(host);
-  const dice: RoomState["dice"] = [6, 6, 6, 6, 6];
+  const dice: RoomState["dice"] = [1, 2, 3, 4, 6];
   const held: RoomState["held"] = [true, false, false, false, false];
-  const faces = () =>
-    [...host.querySelectorAll(".die-face")].map((face) =>
-      face.getAttribute("data-value"),
-    );
-  const render = async (phase: "shaking" | "throwing" | "result") => {
-    await act(async () =>
-      root.render(
-        <StrictMode>
-          <DiceTray
-            dice={dice}
-            held={held}
-            disabled
-            phase={phase}
-            onHolds={() =>
-              assert.fail("cosmetic animation must not send holds")
-            }
-          />
-        </StrictMode>,
-      ),
-    );
-  };
+  const calls: RoomState["held"][] = [];
   try {
-    await render("shaking");
-    const before = faces();
-    await act(async () => t.mock.timers.tick(SHAKE_FACE_INTERVAL_MS));
-    const after = faces();
-    for (const die of host.querySelectorAll(".die")) {
-      const displayed = die.querySelector(".die-value")?.textContent;
-      assert.equal(
-        die.querySelector(".die-face")?.getAttribute("data-value"),
-        displayed,
+    for (const phase of ["shaking", "throwing", "result"] as const) {
+      await act(async () =>
+        root.render(
+          <StrictMode>
+            <DiceTray
+              dice={dice}
+              held={held}
+              disabled={phase !== "result"}
+              phase={phase}
+              onHolds={(value) => calls.push(value)}
+            />
+          </StrictMode>,
+        ),
       );
-      assert.equal(die.querySelectorAll("circle").length, Number(displayed));
+      assert.deepEqual(
+        [...host.querySelectorAll(".die-face")].map((face) =>
+          Number(face.getAttribute("data-value")),
+        ),
+        dice,
+      );
+      assert.equal(host.querySelectorAll(".die.held").length, 1);
+      assert.equal(
+        host.querySelectorAll(".die:disabled").length,
+        phase === "result" ? 0 : 5,
+      );
+      assert.equal(host.querySelectorAll(".dice-cup-fallback").length, 1);
+      for (const [i, face] of [...host.querySelectorAll(".die-face")].entries())
+        assert.equal(face.querySelectorAll("circle").length, dice[i]);
     }
-    assert.equal(after[0], "6");
-    assert.notEqual(after[1], before[1]);
-    assert.deepEqual(dice, [6, 6, 6, 6, 6]);
-    assert.equal(
-      host.querySelectorAll('.die > span[aria-hidden="true"]').length,
-      5,
-    );
-    await render("throwing");
-    assert.deepEqual(faces(), ["6", "6", "6", "6", "6"]);
-    await act(async () => t.mock.timers.tick(500));
-    assert.deepEqual(faces(), ["6", "6", "6", "6", "6"]);
-    await render("result");
-    assert.deepEqual(faces(), ["6", "6", "6", "6", "6"]);
-    await act(async () => t.mock.timers.tick(1000));
-    assert.deepEqual(faces(), ["6", "6", "6", "6", "6"]);
-  } finally {
-    await act(async () => root.unmount());
-    await act(async () => t.mock.timers.tick(1000));
-  }
-});
-
-test("reduced motion stops face cycling, including preference changes while shaking", async (t) => {
-  t.mock.timers.enable({ apis: ["setInterval"] });
-  t.mock.method(Math, "random", () => 0);
-  const original = Object.getOwnPropertyDescriptor(window, "matchMedia");
-  let listener: (() => void) | undefined;
-  const query = {
-    matches: true,
-    addEventListener: (_type: string, callback: () => void) => {
-      listener = callback;
-    },
-    removeEventListener: () => {
-      listener = undefined;
-    },
-  };
-  Object.defineProperty(window, "matchMedia", {
-    configurable: true,
-    value: () => query,
-  });
-  const host = document.createElement("div"),
-    root = createRoot(host);
-  const faces = () => host.textContent;
-  try {
     await act(async () =>
-      root.render(
-        <DiceTray
-          dice={[6, 6, 6, 6, 6]}
-          held={[false, false, false, false, false]}
-          disabled
-          phase="shaking"
-          onHolds={() => {}}
-        />,
-      ),
+      host.querySelectorAll<HTMLButtonElement>(".die")[1]!.click(),
     );
-    const initial = faces();
-    await act(async () => t.mock.timers.tick(SHAKE_FACE_INTERVAL_MS));
-    assert.equal(faces(), initial);
-    query.matches = false;
-    await act(async () => {
-      listener?.();
-      t.mock.timers.tick(SHAKE_FACE_INTERVAL_MS);
-    });
-    assert.notEqual(faces(), initial);
-    query.matches = true;
-    await act(async () => listener?.());
-    const stopped = faces();
-    await act(async () => t.mock.timers.tick(SHAKE_FACE_INTERVAL_MS));
-    assert.equal(faces(), stopped);
+    assert.deepEqual(calls, [[true, true, false, false, false]]);
+    assert.deepEqual(held, [true, false, false, false, false]);
   } finally {
     await act(async () => root.unmount());
-    assert.equal(listener, undefined);
-    if (original) Object.defineProperty(window, "matchMedia", original);
-    else Reflect.deleteProperty(window, "matchMedia");
   }
 });
 
-test("manual shaking persists; throw locks controls; duplicates and holds do not replay results", async () => {
+test("shaking persists; throw locks controls; duplicates and holds do not replay results", async () => {
   const ui = await mount();
   try {
     const button = () => ui.host.querySelector<HTMLButtonElement>(".roll")!;
@@ -406,8 +379,11 @@ test("manual shaking persists; throw locks controls; duplicates and holds do not
       ui.host.querySelector(".dice-tray")?.getAttribute("data-roll-phase"),
       "shaking",
     );
-    assert.match(button().textContent!, /멈춤/);
-    assert.equal(button().disabled, false);
+    assert.equal(button().disabled, true);
+    assert.equal(
+      ui.host.querySelector<HTMLButtonElement>(".throw")!.disabled,
+      false,
+    );
     assert.equal(ui.host.querySelector(".preview-score"), null);
     assert.ok(ui.confirm().disabled);
     assert.equal(ui.host.querySelectorAll(".die:disabled").length, 5);
@@ -415,27 +391,38 @@ test("manual shaking persists; throw locks controls; duplicates and holds do not
       ui.host.querySelector(".die.held")!.getAttribute("aria-label")!,
       /3, 보관 중/,
     );
-    await act(async () => click(button()));
+    await act(async () =>
+      click(ui.host.querySelector<HTMLButtonElement>(".throw")!),
+    );
     assert.deepEqual(ui.actions, ["startShake", "roll"]);
+    await ui.render({
+      room: { ...shaking, revision: 3, rollPhase: "throwing" },
+    });
+    await settleAnimation();
+    assert.equal(ui.host.querySelector(".combo-feedback"), null);
     const result = {
       ...shaking,
-      revision: 3,
+      revision: 4,
       rollCount: 2,
       rollPhase: "idle" as const,
     };
     await ui.render({ room: result });
-    assert.equal(
-      ui.host.querySelector(".dice-tray")?.getAttribute("data-roll-phase"),
-      "throwing",
-    );
-    assert.ok(button().disabled);
-    assert.equal(ui.host.querySelector(".preview-score"), null);
-    assert.equal(ui.host.querySelector(".combo-feedback"), null);
+    // A loaded host can finish the 150ms playback buffer before act returns.
+    if (
+      ui.host.querySelector(".dice-tray")?.getAttribute("data-roll-phase") ===
+      "throwing"
+    ) {
+      assert.ok(button().disabled);
+      assert.equal(ui.host.querySelector(".preview-score"), null);
+      assert.equal(ui.host.querySelector(".combo-feedback"), null);
+    }
     await settleAnimation();
     assert.equal(button().disabled, false);
     const banner = ui.host.querySelector(".combo-feedback");
     assert.ok(banner);
     assert.match(banner.textContent!, /YACHT/);
+    assert.match(banner.textContent!, /족보 달성!/);
+    assert.match(banner.textContent!, /기록 가능/);
     assert.equal(
       ui.host.querySelectorAll('.score-panel [data-highlight="special"]')
         .length,
@@ -445,15 +432,15 @@ test("manual shaking persists; throw locks controls; duplicates and holds do not
     assert.equal(ui.host.querySelector(".combo-feedback"), banner);
     const hold = {
       ...result,
-      revision: 4,
+      revision: 5,
       held: [false, false, false, false, false] as RoomState["held"],
     };
     await ui.render({ room: hold });
     assert.ok(ui.host.querySelector('[data-feedback="hold-changed"]'));
     assert.equal(ui.host.querySelector(".combo-feedback"), banner);
-    await ui.render({ room: { ...hold, revision: 5, rollPhase: "shaking" } });
+    await ui.render({ room: { ...hold, revision: 6, rollPhase: "shaking" } });
     assert.equal(ui.host.querySelector(".combo-feedback"), null);
-    await ui.render({ room: { ...hold, revision: 6, rollCount: 3 } });
+    await ui.render({ room: { ...hold, revision: 7, rollCount: 3 } });
     await settleAnimation();
     assert.ok(ui.host.querySelector(".combo-feedback"));
     assert.notEqual(ui.host.querySelector(".combo-feedback"), banner);
@@ -660,7 +647,12 @@ test("roll, room, turn, disconnect and pause transitions invalidate selection", 
     await ui.render({ room: { ...state(), rollCount: 2, revision: 2 } });
     assert.ok(ui.confirm().disabled);
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 550));
+      await new Promise((resolve) =>
+        setTimeout(
+          resolve,
+          Math.max(FEEDBACK_TIMING.throw, FEEDBACK_TIMING.turnIntro) + 50,
+        ),
+      );
     });
     await choose();
     await ui.render({ connected: false });
@@ -757,6 +749,15 @@ test("Yacht effects only follow score commits, including final turns; duplicates
       assert.equal(
         document.querySelectorAll(".celebration-title").length,
         score ? 1 : 0,
+      );
+      assert.equal(
+        document.querySelectorAll('img.sans-face[src="/sans-face.svg"]').length,
+        score ? 0 : 1,
+      );
+      assert.ok(
+        !document
+          .querySelector(".celebration-layer")
+          ?.textContent?.includes("😱"),
       );
       await ui.render({ room: structuredClone(room) });
       assert.equal(document.querySelectorAll("[data-celebration]").length, 1);

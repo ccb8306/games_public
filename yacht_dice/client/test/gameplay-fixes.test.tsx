@@ -3,6 +3,8 @@ import { after, test } from "node:test";
 import { JSDOM } from "jsdom";
 import { act, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { RoundEventBanner } from "../src/components/RoundEventBanner";
+import { EVENTS, type RoomState } from "@yacht/shared";
 import {
   CelebrationLayer,
   CELEBRATION_DURATION_MS,
@@ -21,6 +23,7 @@ for (const [key, value] of Object.entries({
   document: dom.window.document,
   navigator: dom.window.navigator,
   location: dom.window.location,
+  sessionStorage: dom.window.sessionStorage,
   IS_REACT_ACT_ENVIRONMENT: true,
 })) {
   originals.set(key, Object.getOwnPropertyDescriptor(globalThis, key));
@@ -31,6 +34,40 @@ after(() => {
   for (const [key, value] of originals) {
     if (value) Object.defineProperty(globalThis, key, value);
     else Reflect.deleteProperty(globalThis, key);
+  }
+});
+
+test("round events announce once, expire in StrictMode and announce again next event round", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const host = document.createElement("div");
+  const root = createRoot(host);
+  const room = {
+    roomId: "event-test",
+    phase: "playing",
+    augment: { round: 3, event: EVENTS[0].id },
+  } as RoomState;
+  const render = () =>
+    act(async () =>
+      root.render(
+        <StrictMode>
+          <RoundEventBanner room={room} />
+        </StrictMode>,
+      ),
+    );
+  try {
+    await render();
+    assert.match(host.textContent!, new RegExp(EVENTS[0].name));
+    await act(async () => t.mock.timers.tick(7000));
+    assert.equal(host.textContent, "");
+    await render();
+    assert.equal(host.textContent, "");
+    room.augment!.round = 6;
+    await render();
+    assert.ok(host.querySelector('[role="status"]'));
+    await act(async () => host.querySelector("button")!.click());
+    assert.equal(host.textContent, "");
+  } finally {
+    await act(async () => root.unmount());
   }
 });
 

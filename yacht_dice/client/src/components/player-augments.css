@@ -1,0 +1,95 @@
+.player-augments {
+  display: grid;
+  grid-template-columns: repeat(2, 24px);
+  justify-content: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+.player-augment {
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 6px;
+  color: #d8eaf0;
+  cursor: pointer;
+}
+.player-augment.gold {
+  color: #f6ce74;
+}
+.player-augment.prism {
+  color: #d6b3ff;
+}
+.player-augment.flash {
+  color: #ff9494;
+  background: #5c1c2b;
+}
+.player-augment[data-spent="true"] {
+  opacity: 0.5;
+}
+.player-augment:hover,
+.player-augment:focus-visible {
+  outline: 2px solid #f2cf82;
+  outline-offset: 1px;
+}
+.player-augment .augment-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+}
+.player-augment-dialog {
+  color: #edf5f2;
+  background: #14372e;
+  border: 1px solid #729c87;
+  border-radius: 16px;
+  padding: 22px;
+  width: min(360px, calc(100vw - 32px));
+  text-align: left;
+  box-sizing: border-box;
+}
+.player-augment-dialog::backdrop {
+  background: #06140fba;
+}
+.player-augment-dialog h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0;
+  font-size: 1.15rem;
+}
+.player-augment-dialog h3 svg {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+}
+.player-augment-dialog p {
+  font-size: 1rem;
+  line-height: 1.6;
+  white-space: normal;
+  font-weight: normal;
+}
+.player-augment-dialog .ability-status {
+  color: #f2cf82;
+}
+.player-augment-dialog button {
+  width: 100%;
+  padding: 10px;
+}
+@media (min-width: 1100px) and (max-height: 850px) {
+  .game-room .score-panel:has(.player-augments) {
+    --score-content-height: 22px;
+  }
+  .game-room .score-panel:has(.player-augments) h2 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .game-room .score-panel:has(.player-augments) .preview-score {
+    line-height: 22px;
+  }
+}
