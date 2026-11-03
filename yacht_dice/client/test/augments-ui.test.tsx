@@ -127,6 +127,11 @@ test("card reroll is separate from selection, spends only its slot and reports t
     );
     assert.equal(commands[1]!.op, "pick");
     assert.equal(room.players[0]!.augment!.offers.length, 0);
+    await act(async () =>
+      document
+        .querySelector<HTMLButtonElement>(".augment-result-burst > button")!
+        .click(),
+    );
     room.augment!.drafting = false;
     room.players[0]!.augment!.bonus = 16;
     room.augment!.results.push(
@@ -143,14 +148,14 @@ test("card reroll is separate from selection, spends only its slot and reports t
       document.querySelector(".augment-receipts summary")!.textContent!,
       /\+16점/,
     );
-    assert.equal(document.querySelectorAll(".augment-receipts li").length, 2);
+    assert.equal(document.querySelectorAll(".augment-receipts li").length, 3);
     await act(async () =>
       document
         .querySelector<HTMLButtonElement>('[aria-label="지급 알림 닫기"]')!
         .click(),
     );
     assert.equal(document.querySelector(".augment-result-burst"), null);
-    assert.equal(document.querySelectorAll(".augment-receipts li").length, 2);
+    assert.equal(document.querySelectorAll(".augment-receipts li").length, 3);
     room.dice = [6, 6, 6, 6, 6];
     room.held = Array(5).fill(false);
     room.rollCount = 1;
@@ -213,12 +218,13 @@ test("card reroll is separate from selection, spends only its slot and reports t
     assert.match(sixes.getAttribute("title")!, /상단 63점 인정 24점/);
     await act(async () => render());
     room.augment!.log.push("능력 발동!");
+    room.augment!.results.push({ key: "ability-result", text: "능력 발동!" });
     await act(async () => render());
-    assert.ok(document.querySelector(".augment-burst"));
+    assert.ok(document.querySelector(".augment-result-burst"));
     room.augment!.log.push("다음 행동");
     await act(async () => render());
     await act(async () => new Promise((resolve) => setTimeout(resolve, 1900)));
-    assert.equal(document.querySelector(".augment-burst"), null);
+    assert.equal(document.querySelector(".augment-result-burst"), null);
     room.augment!.results.push({
       key: "activation-ui",
       text: "시전자 → 대상",

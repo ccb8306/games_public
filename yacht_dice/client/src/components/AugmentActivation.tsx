@@ -15,13 +15,52 @@ export function AugmentActivation({
     score: "능력 발동",
   };
   return (
-    <div className="activation-content">
+    <div className="activation-content" data-ability={activation.id}>
       <div className="activation-emblem" aria-hidden="true">
         <AugmentIcon
           id={activation.id === "loanDouble" ? "loan" : activation.id}
         />
       </div>
       <div className="activation-copy">
+        {["customDie", "monster", "custody", "estate", "crown"].includes(
+          activation.id,
+        ) && (
+          <div className={`novel-effect ${activation.id}`} aria-hidden="true">
+            <span>
+              {activation.id === "monster"
+                ? "⚄"
+                : activation.id === "custody"
+                  ? "🍼"
+                  : activation.id === "estate"
+                    ? "🏗"
+                    : activation.id === "crown"
+                      ? "👑"
+                      : "⚙"}
+            </span>
+            <b>
+              {activation.id === "monster"
+                ? "👾"
+                : activation.id === "custody"
+                  ? "🛒"
+                  : activation.id === "estate"
+                    ? "🏰"
+                    : activation.id === "crown"
+                      ? "✦"
+                      : "⚅"}
+            </b>
+            <span>
+              {activation.id === "monster"
+                ? "⚄"
+                : activation.id === "custody"
+                  ? "🍼"
+                  : activation.id === "estate"
+                    ? "🏗"
+                    : activation.id === "crown"
+                      ? "👑"
+                      : "⚙"}
+            </span>
+          </div>
+        )}
         <small>
           {activation.flash ? "✦ 번뜩임 · " : ""}
           {labels[activation.kind]}

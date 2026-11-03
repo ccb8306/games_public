@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   AUGMENTS,
+  categoryScore,
   SCORE_CATEGORIES,
   SCORE_LABELS,
   useAugment,
@@ -10,6 +11,10 @@ import {
 } from "@yacht/shared";
 
 export const DIRECT_INPUT_IDS = [
+  "lifebuoy",
+  "cleaner",
+  "odd",
+  "six",
   "parasite",
   "lastmove",
   "scoreRemodel",
@@ -32,7 +37,6 @@ export const DIRECT_INPUT_IDS = [
   "chaos",
   "exchange",
   "target",
-  "erase",
   "parallel",
   "thief",
   "lock",
@@ -59,29 +63,32 @@ export function AugmentActionInputs({
     [die, setDie] = useState<number | null>(id === "revive" ? 0 : null),
     [mine, setMine] = useState("");
   // Use the same validation as the server, without committing the draft or consuming randomness.
-  function legal(fields: Partial<AugmentCommand>) {
-    if (!enabled) return false;
+  function reason(fields: Partial<AugmentCommand>) {
+    if (!enabled)
+      return "현재 사용할 수 없습니다. 위의 사용 조건을 확인하세요.";
     const draft = structuredClone(room),
       actor = draft.players.find((p) => p?.id === player.id)!;
     try {
       useAugment(draft, actor, { op: "use", id, ...fields }, () => 0);
-      return true;
-    } catch {
-      return false;
+      return "";
+    } catch (error) {
+      return (error as Error).message;
     }
   }
+  const legal = (fields: Partial<AugmentCommand>) => !reason(fields);
   if (id === "parasite")
     return (
       <div className="augment-direct">
         <p>
-          게임 끝까지 계약할 스폰서를 고르세요. 상대 고득점 +4점, 내가 직전
-          기록을 따라잡으면 +6점!
+          게임 끝까지 계약할 스폰서를 고르세요. 상대 기본 20점 이상에 +5점, 내가
+          상대의 직전 기본 점수(최소 10점)를 따라잡아도 +5점!
         </p>
         {room.players
           .filter((q) => q && q.id !== player.id && !q.forfeited)
           .map((q) => (
             <button
               key={q!.id}
+              title={reason({ target: q!.id })}
               disabled={!legal({ target: q!.id })}
               onClick={() => onUse({ target: q!.id })}
             >
@@ -94,11 +101,40 @@ export function AugmentActionInputs({
     return (
       <button
         className="primary"
+        title={reason({})}
         disabled={!legal({})}
         onClick={() => onUse({})}
       >
         1 전부 반품하기
       </button>
+    );
+  if (id === "lifebuoy")
+    return (
+      <button
+        title={reason({})}
+        disabled={!legal({})}
+        onClick={() => onUse({})}
+      >
+        일반 보관 풀고 전부 무료 재굴림
+      </button>
+    );
+  if (["odd", "six", "cleaner"].includes(id))
+    return (
+      <div className="augment-choice">
+        {room.dice.map((n, i) => (
+          <button
+            key={i}
+            title={reason({ die: i })}
+            disabled={!legal({ die: i })}
+            onClick={() => onUse({ die: i })}
+          >
+            {i + 1}번 · {n}{" "}
+            {id === "cleaner"
+              ? "청소권 재굴림"
+              : `→ ${id === "six" ? 6 : (n ?? 0) - 1}`}
+          </button>
+        ))}
+      </div>
     );
   if (id === "scoreRemodel")
     return (
@@ -126,10 +162,11 @@ export function AugmentActionInputs({
           .map((k) => (
             <button
               key={k}
+              title={reason({ category: mine, destination: k })}
               disabled={!legal({ category: mine, destination: k })}
               onClick={() => onUse({ category: mine, destination: k })}
             >
-              {SCORE_LABELS[k]}에 0점 · 이사 확정
+              {SCORE_LABELS[k]}에 0점 · 총점 +15 · 이사 확정
             </button>
           ))}
       </div>
@@ -150,6 +187,7 @@ export function AugmentActionInputs({
         </p>
         <button
           className="primary"
+          title={reason({})}
           disabled={!legal({})}
           onClick={() => onUse({})}
         >
@@ -166,6 +204,7 @@ export function AugmentActionInputs({
             n <= 3 && (
               <button
                 key={i}
+                title={reason({ die: i })}
                 disabled={!legal({ die: i })}
                 onClick={() => onUse({ die: i })}
               >
@@ -191,6 +230,7 @@ export function AugmentActionInputs({
                   .map((delta) => (
                     <button
                       key={delta}
+                      title={reason({ die: i, value: n + delta })}
                       disabled={!legal({ die: i, value: n + delta })}
                       onClick={() => onUse({ die: i, value: n + delta })}
                     >
@@ -211,6 +251,7 @@ export function AugmentActionInputs({
             n !== null && (
               <button
                 key={i}
+                title={reason({ die: i })}
                 disabled={!legal({ die: i })}
                 onClick={() => onUse({ die: i })}
               >
@@ -249,6 +290,7 @@ export function AugmentActionInputs({
                 n !== room.dice[source] && (
                   <button
                     key={i}
+                    title={reason({ die: i, value: source })}
                     disabled={!legal({ die: i, value: source })}
                     onClick={() => onUse({ die: i, value: source })}
                   >
@@ -274,6 +316,7 @@ export function AugmentActionInputs({
               return (
                 <button
                   key={`${i}-${j}`}
+                  title={reason({ indices: [i, j] })}
                   disabled={!legal({ indices: [i, j] })}
                   onClick={() => onUse({ indices: [i, j] })}
                 >
@@ -320,6 +363,7 @@ export function AugmentActionInputs({
               .map((n) => (
                 <button
                   key={n}
+                  title={reason({ die, value: n })}
                   disabled={!legal({ die, value: n })}
                   onClick={() => onUse({ die, value: n })}
                 >
@@ -350,6 +394,7 @@ export function AugmentActionInputs({
           {room.dice.map((n, i) => (
             <button
               key={i}
+              title={reason({ die: i })}
               disabled={!legal({ die: i })}
               onClick={() => onUse({ die: i })}
             >
@@ -360,35 +405,34 @@ export function AugmentActionInputs({
         </div>
       </div>
     );
-  if (["target", "erase", "parallel"].includes(id)) {
-    const categories = SCORE_CATEGORIES.filter((k) =>
-      id === "erase" ? player.scores[k] === 0 : player.scores[k] === null,
+  if (["target", "parallel"].includes(id)) {
+    const categories = SCORE_CATEGORIES.filter(
+      (k) => id === "parallel" || player.scores[k] === null,
     );
-    if (id === "erase" && !categories.length)
-      return (
-        <button
-          className="primary"
-          disabled={!legal({})}
-          onClick={() => onUse({})}
-        >
-          0점 칸 없음 · +20점 예약
-        </button>
-      );
     return (
       <div className="augment-direct">
         <p>
-          족보를 누르면{" "}
-          {id === "target" ? "목표가 확정" : "이번 기록에 적용되도록 예약"}
+          족보를 누르면 {id === "target" ? "목표가 확정" : "별도 보너스가 예약"}
           됩니다.
         </p>
         <div className="augment-choice">
           {categories.map((category) => (
             <button
               key={category}
+              title={reason({ category })}
               disabled={!legal({ category })}
               onClick={() => onUse({ category })}
             >
               {SCORE_LABELS[category]}
+              {id === "parallel"
+                ? ` · 별도 +${Math.min(
+                    40,
+                    categoryScore(
+                      category,
+                      room.dice.map((n) => n ?? 0),
+                    ),
+                  )}점 · ${player.scores[category] === null ? "빈 칸 유지" : "기존 기록 유지"}`
+                : ""}
             </button>
           ))}
         </div>
@@ -402,7 +446,40 @@ export function AugmentActionInputs({
       q.id !== player.id &&
       Object.values(q.scores).some((n) => n === null),
   );
-  if (["thief", "lock", "seal", "duel"].includes(id))
+  if (id === "lock")
+    return (
+      <div className="augment-direct">
+        <p>
+          내 1~3 주사위를 고른 뒤 받을 상대를 누르세요. 내 주사위는
+          그대로입니다.
+        </p>
+        <div className="augment-choice">
+          {room.dice.map((n, i) =>
+            n !== null && n <= 3 ? (
+              <button
+                key={i}
+                aria-pressed={die === i}
+                onClick={() => setDie(i)}
+              >
+                {i + 1}번 · {n}
+              </button>
+            ) : null,
+          )}
+        </div>
+        {opponents.map((q) => (
+          <button
+            key={q.id}
+            disabled={
+              die === null || !legal({ die: die ?? undefined, target: q.id })
+            }
+            onClick={() => onUse({ die: die!, target: q.id })}
+          >
+            {q.nickname} 다음 턴에 {die === null ? "?" : room.dice[die]} 고정
+          </button>
+        ))}
+      </div>
+    );
+  if (["thief", "seal", "duel"].includes(id))
     return (
       <div className="augment-direct">
         <p>상대를 누르면 다음 턴에 효과를 예약합니다.</p>
@@ -410,6 +487,7 @@ export function AugmentActionInputs({
           {opponents.map((q) => (
             <button
               key={q.id}
+              title={reason({ target: q.id })}
               disabled={!legal({ target: q.id })}
               onClick={() => onUse({ target: q.id })}
             >

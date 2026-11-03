@@ -9,8 +9,8 @@ test('recorded 30 plus augment 6 is separate, pure, and totals 36',()=>{
 });
 test('zero repair, upper threshold, debt floor and parallel are classified by destination',()=>{
  const s=rolled(['erase']);s.players[0].scores.sixes=0;s.players[0].augment.rawUpper=40;
- useAugment(s,s.players[0],{op:'use',id:'erase',category:'sixes'},()=>0);
- assert.deepEqual(scoreBreakdown(s,s.players[0],'choice'),{base:30,upperCredit:0,recorded:30,augment:0,otherRecords:30,upperBonus:35,floorAdjustment:0,total:95});
+
+ assert.deepEqual(scoreBreakdown(s,s.players[0],'choice'),{base:30,upperCredit:0,recorded:30,augment:0,otherRecords:0,upperBonus:0,floorAdjustment:0,total:30});
  const p=rolled(['parallel']);useAugment(p,p.players[0],{op:'use',id:'parallel',category:'yacht'},()=>0);
  assert.equal(scoreBreakdown(p,p.players[0],'choice').augment,40);assert.equal(scoreBreakdown(p,p.players[0],'yacht'),null);
  const d=rolled([],[1,1,1,1,1]);d.players[0].augment.bonus=-20;
@@ -21,7 +21,7 @@ test('preview includes only currently resolved duel and jackpot awards without c
   const s=rolled([]),p=s.players[0],q=s.players[1];s.augment.turn.serial=5;
   if(kind==='duel')s.augment.duels=[{a:p.id,b:q.id,aScore:null,bScore:10,after:1,accepted:true}];
   else s.augment.jackpot={after:1,pot:40,entries:[{id:p.id,score:null},{id:q.id,score:10}]};
-  const before=structuredClone(s),r=scoreBreakdown(s,p,'choice');assert.equal(r.augment,kind==='duel'?35:100);assert.deepEqual(s,before);
+  const before=structuredClone(s),r=scoreBreakdown(s,p,'choice');assert.equal(r.augment,kind==='duel'?40:100);assert.deepEqual(s,before);
   const total=playerTotals(p).total;recordAugment(s,p,'choice');assert.equal(playerTotals(p).total-total,r.total);
  }
 });

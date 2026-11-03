@@ -1,4 +1,4 @@
-import { afterAugmentRoll, reconcileAugment } from "@yacht/shared";
+import { afterAugmentRoll, reconcileAugment,physicalFaces,monsterIndex } from "@yacht/shared";
 import { PhysicsPool } from "./physics-pool.js";
 import type { PhysicsEvent } from "./physics-worker.js";
 import { completeRoll, type MotionFrame } from "@yacht/shared";
@@ -63,6 +63,7 @@ export class Rooms {
     }
   }
   private startPhysics(room: Room, playerId: string) {
+    if(room.state.augment)for(const key of Object.keys(room.state.augment.turn.customOverride??{}))if(!room.state.held[Number(key)])delete room.state.augment.turn.customOverride![key];
     const id = randomUUID();
     room.physicsJob = { id, actor:playerId, before:room.state.motion };
     if (room.state.augment?.turn.reroll?.id === "practice") room.physicsJob.autoAt = this.now() + 500;
@@ -70,7 +71,7 @@ export class Rooms {
       id, seq:0, at:Date.now(), phase:"shaking", wind:false, paused:false, cup:null,
       dice:room.state.motion?.dice ?? Array.from({length:room.state.dice.length},()=>({p:[0,0.48,0] as [number,number,number],q:[0,0,0,1] as [number,number,number,number]})),
     };
-    this.physics.send({type:"start",roomId:room.state.roomId,id,held:room.state.held,dice:room.state.dice,poses:room.physicsJob.before?.dice});
+    this.physics.send({type:"start",roomId:room.state.roomId,id,held:room.state.held,dice:room.state.dice,poses:room.physicsJob.before?.dice,faces:physicalFaces(room.state),monster:monsterIndex(room.state)});
   }
   private physicalEvent(event: PhysicsEvent) {
     const room = [...this.rooms.values()].find(r => r.state.roomId === event.roomId);

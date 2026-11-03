@@ -38,23 +38,23 @@ test('all one-die rerolls preserve counts, other faces and holds across 4-10 dic
 test('each draft slot rerolls once, preserves peers and rarity, rejects stale requests and resets next draft',()=>{
  for(const [round,tier,flashId] of [[1,'silver','taxSix'],[4,'gold','handsUp'],[7,'gold','handsUp'],[10,'prism','squid']])for(const flash of [false,true]){
   let s=room();s.augment.round=round;s.augment.drafting=true;
-  for(const p of s.players){p.augment.items=[];p.augment.offers=AUGMENTS.filter(d=>d.rarity===tier&&!d.flash&&d.id!=='evolution').slice(0,3).map(d=>d.id);if(flash)p.augment.offers[2]=flashId;p.augment.seenOffers=[...p.augment.offers];p.augment.flashOffer=flash;}
+  for(const p of s.players){p.augment.items=[];p.augment.offers=AUGMENTS.filter(d=>d.rarity===tier&&!d.flash&&d.id!=='evolution').slice(0,3).map(d=>d.id);if(flash)p.augment.offers.push(flashId);p.augment.seenOffers=[...p.augment.offers];p.augment.flashOffer=flash;p.augment.rerolled=p.augment.offers.map(()=>false);}
   const pid=s.players[0].id,peers=structuredClone(s.players.slice(1));
-  for(const offerIndex of [0,2,1]){
+  for(const offerIndex of (flash?[0,2,1,3]:[0,2,1])){
    const before=structuredClone(s),id=s.players[0].augment.offers[offerIndex],result=action(s,{op:'refresh',offerIndex,id});assert.equal(result.ok,true,JSON.stringify(result));assert.deepEqual(s,before);s=result.state;
    const ap=s.players[0].augment;assert.equal(ap.rerolled[offerIndex],true);assert.ok(!before.players[0].augment.seenOffers.includes(ap.offers[offerIndex]));
-   for(let i=0;i<3;i++)if(i!==offerIndex)assert.equal(ap.offers[i],before.players[0].augment.offers[i]);assert.deepEqual(s.players.slice(1),peers);
-   assert.equal(AUGMENTS.find(d=>d.id===ap.offers[offerIndex]).rarity,tier);assert.equal(ap.offers.filter(id=>AUGMENTS.find(d=>d.id===id).flash).length,Number(flash));assert.equal(new Set(ap.offers).size,3);
+   for(let i=0;i<s.players[0].augment.offers.length;i++)if(i!==offerIndex)assert.equal(ap.offers[i],before.players[0].augment.offers[i]);assert.deepEqual(s.players.slice(1),peers);
+   assert.equal(AUGMENTS.find(d=>d.id===ap.offers[offerIndex]).rarity,tier);assert.equal(ap.offers.filter(id=>AUGMENTS.find(d=>d.id===id).flash).length,Number(flash));assert.equal(new Set(ap.offers).size,ap.offers.length);
    assert.equal(action(s,{op:'refresh',offerIndex,id}).ok,false);assert.equal(action(s,{op:'refresh',offerIndex,id:ap.offers[offerIndex]}).ok,false);assert.equal(roomStateSchema.safeParse(s).success,true);
   }
-  for(const offerIndex of [undefined,-1,3,.5])assert.equal(action(s,{op:'refresh',offerIndex,id:s.players[0].augment.offers[0]}).ok,false);
+  for(const offerIndex of [undefined,-1,4,.5])assert.equal(action(s,{op:'refresh',offerIndex,id:s.players[0].augment.offers[0]}).ok,false);
   const chosen=action(s,{op:'pick',id:s.players[0].augment.offers[0]},pid);assert.equal(chosen.ok,true);assert.equal(action(chosen.state,{op:'refresh',offerIndex:0,id:'nudge'},pid).ok,false);
-  if(round<10){s.augment.round=round===1?3:round+2;s.augment.done=s.players.map(p=>p.id);advanceAugment(s,()=>0);assert.equal(s.augment.drafting,true);assert.deepEqual(s.players[0].augment.rerolled,[false,false,false]);assert.equal(action(s,{op:'refresh',offerIndex:0,id:s.players[0].augment.offers[0]}).ok,true);}
+  if(round<10){s.augment.round=round===1?3:round+2;s.augment.done=s.players.map(p=>p.id);advanceAugment(s,()=>0);assert.equal(s.augment.drafting,true);assert.deepEqual(s.players[0].augment.rerolled,s.players[0].augment.offers.map(()=>false));assert.equal(action(s,{op:'refresh',offerIndex:0,id:s.players[0].augment.offers[0]}).ok,true);}
  }
 });
 
 test('no eligible replacement rejects atomically without spending the slot',()=>{
  const s=room(),p=s.players[0];s.augment.round=1;s.augment.drafting=true;p.augment.offers=['nudge','mirror','taxSix'];p.augment.seenOffers=[...p.augment.offers];
  p.augment.items=AUGMENTS.filter(d=>d.flash&&d.rarity==='silver'&&d.id!=='taxSix').map(d=>({id:d.id,remaining:d.charges,usedTurn:-1,usedRound:-1}));
- const before=structuredClone(s);assert.equal(action(s,{op:'refresh',offerIndex:2,id:'taxSix'}).ok,false);assert.deepEqual(s,before);assert.deepEqual(p.augment.rerolled,[false,false,false]);
+ const before=structuredClone(s);assert.equal(action(s,{op:'refresh',offerIndex:2,id:'taxSix'}).ok,false);assert.deepEqual(s,before);assert.deepEqual(p.augment.rerolled,[false,false,false,false]);
 });

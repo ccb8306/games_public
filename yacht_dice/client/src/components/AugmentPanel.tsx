@@ -1,5 +1,11 @@
+import {
+  useAugmentEffects,
+  type AugmentEffects,
+} from "../hooks/useAugmentEffects";
+import { AugmentEvent } from "./AugmentEvent";
 import { createPortal } from "react-dom";
-import { AugmentActivation } from "./AugmentActivation";
+import { NovelAugmentInputs, NovelAugmentStatus } from "./NovelAugmentInputs";
+import { NOVEL_IDS, monsterIndex } from "@yacht/shared";
 import {
   NEW_INPUTS,
   NewAugmentInputs,
@@ -8,9 +14,10 @@ import {
 import { AugmentIcon as Icon } from "./AugmentIcon";
 import { FlashInputs } from "./FlashInputs";
 import { AugmentActionInputs, DIRECT_INPUT_IDS } from "./AugmentActionInputs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   AUGMENTS,
+  categoryScore,
   MISCHIEF_IDS,
   EVENTS,
   SCORE_CATEGORIES,
@@ -24,6 +31,44 @@ import {
   type AugmentDefinition,
 } from "@yacht/shared";
 
+function OfferSlot({
+  children,
+  flash,
+  rarity,
+  draft,
+  muted,
+}: {
+  children: ReactNode;
+  flash: boolean;
+  rarity?: string;
+  draft: string;
+  muted: boolean;
+}) {
+  const [reveal] = useState(() => {
+    try {
+      return sessionStorage.getItem("yacht.flashReveal") !== draft;
+    } catch {
+      return true;
+    }
+  });
+  useEffect(() => {
+    if (flash)
+      try {
+        sessionStorage.setItem("yacht.flashReveal", draft);
+      } catch {}
+  }, [flash, draft]);
+  return (
+    <div
+      className="augment-offer-slot"
+      data-flash={flash}
+      data-rarity={rarity}
+      data-reveal={flash && reveal && !muted}
+    >
+      {children}
+    </div>
+  );
+}
+
 function Card({
   def,
   onClick,
@@ -31,6 +76,7 @@ function Card({
   detail,
   ready,
   action,
+  status,
 }: {
   def: AugmentDefinition;
   onClick?: () => void;
@@ -38,6 +84,7 @@ function Card({
   detail?: string;
   ready?: boolean;
   action?: string;
+  status?: string;
 }) {
   return (
     <button
@@ -67,6 +114,9 @@ function Card({
               confiscate: "남의 주사위를 내 컵으로!",
               hostage: "몸값이냐, 주사위 3개 봉인이냐!",
               goldRush: "골드 셔플 + 내 카드 완충!",
+              monster: "주사위 둘을 먹고 진짜 12면체로!",
+              custody: "같이 키우고 서로 떠넘기는 주사위!",
+              crown: "왕관을 빼앗고 끝까지 지켜라!",
               squid: "판돈과 보너스를 한 명이 독식!",
               handsUp: "남들만 전부 다시 섞어!",
               bombParcel: "안전한 납부냐, 역폭발 도박이냐!",
@@ -74,6 +124,11 @@ function Card({
           </small>
         )}
         <small>{detail ?? def.description}</small>
+        {status && (
+          <small className="augment-availability" data-ready={ready}>
+            {status}
+          </small>
+        )}
         {action && (
           <span className="augment-card-action">
             {action} <span aria-hidden="true">→</span>
@@ -89,12 +144,14 @@ export function AugmentPanel({
   disabled,
   onCommand,
   error,
+  effects,
 }: {
   room: RoomState;
   playerId?: string;
   disabled: boolean;
   onCommand: (c: AugmentCommand) => void;
   error?: string;
+  effects?: AugmentEffects;
 }) {
   const a = room.augment!,
     p = room.players.find((p) => p?.id === playerId),
@@ -106,45 +163,9 @@ export function AugmentPanel({
   const [catalogFilter, setCatalogFilter] = useState("all");
   const [catalogRarity, setCatalogRarity] = useState("all");
   const [catalogSearch, setCatalogSearch] = useState("");
-  const [burst, setBurst] = useState<string | null>(null),
-    lastLog = useRef(a.log.at(-1));
-  const latestResult = a.results?.at(-1);
-  const [resultBurst, setResultBurst] =
-    useState<typeof latestResult>(undefined);
-  const lastResult = useRef(latestResult?.key);
-  useEffect(() => {
-    if (!latestResult || latestResult.key === lastResult.current) return;
-    const previous = a.results.findIndex((r) => r.key === lastResult.current);
-    const fresh = a.results.slice(previous + 1);
-    lastResult.current = latestResult.key;
-    setResultBurst({
-      key: latestResult.key,
-      text: fresh.map((r) => r.text).join("\n"),
-      activation: latestResult.activation,
-    });
-    const timer = setTimeout(
-      () => setResultBurst(undefined),
-      latestResult.activation ? 6500 : 2000,
-    );
-    return () => clearTimeout(timer);
-  }, [latestResult?.key]);
-  useEffect(() => {
-    const message = a.log.at(-1);
-    if (message === lastLog.current) return;
-    lastLog.current = message;
-    if (
-      !message?.includes("발동!") &&
-      !message?.includes("방어!") &&
-      !message?.includes("반사!")
-    )
-      return;
-    setBurst(message);
-  }, [a.log.at(-1)]);
-  useEffect(() => {
-    if (!burst) return;
-    const timer = setTimeout(() => setBurst(null), 1800);
-    return () => clearTimeout(timer);
-  }, [burst]);
+  const fallbackEffects = useAugmentEffects(room, true, 0, !effects);
+  const fx = effects ?? fallbackEffects;
+  const resultBurst = fx.current;
   const overlay =
     !!selected ||
     library ||
@@ -245,6 +266,42 @@ export function AugmentPanel({
     "debt",
   ];
   function available(id: string) {
+    if (NOVEL_IDS.includes(id)) {
+      if (
+        disabled ||
+        room.rollPhase !== "idle" ||
+        t.pending ||
+        t.reroll ||
+        t.chooseOld ||
+        t.oldWorld
+      )
+        return false;
+      if (a.drafting) return pendingInstant(p!) === id;
+      if (!myTurn || t.flags.includes("final")) return false;
+      if (monsterIndex(room) !== undefined)
+        return id === "monster" && room.rollCount > 0;
+      if (
+        !ap!.items.some(
+          (i) =>
+            i.id === id &&
+            (i.remaining !== 0 ||
+              (id === "estate" && !!ap!.estate && !ap!.estate.relocated)) &&
+            (i.usedTurn !== t.serial || i.extraTurn === t.serial),
+        ) ||
+        goldDisabled(p!, id)
+      )
+        return false;
+      return (
+        id === "custody" ||
+        (["monster", "crown", "customDie", "estate"].includes(id) &&
+          room.rollCount === 0)
+      );
+    }
+    if (
+      monsterIndex(room) !== undefined &&
+      ["cat", "memory", "fork"].includes(id)
+    )
+      return false;
     if (!usable && !(a.drafting && !disabled && pendingInstant(p!) === id))
       return false;
     const d = AUGMENTS.find((d) => d.id === id),
@@ -254,7 +311,11 @@ export function AugmentPanel({
     if (
       d &&
       (d.trigger !== "active" ||
-        !items.some((i) => i.remaining !== 0 && i.usedTurn !== t.serial))
+        !items.some(
+          (i) =>
+            i.remaining !== 0 &&
+            (i.usedTurn !== t.serial || i.extraTurn === t.serial),
+        ))
     )
       return false;
     if (!d && t.flags.includes(id)) return false;
@@ -279,10 +340,21 @@ export function AugmentPanel({
         room.rollCount < t.maxRolls &&
         !t.flags.includes("final")
       );
-    if (!room.rollCount || t.chooseOld) return false;
+    if (!room.rollCount || t.chooseOld || t.oldWorld) return false;
+    if (id === "lifebuoy")
+      return (
+        room.rollCount === 1 &&
+        !t.flags.includes("faceChanged") &&
+        !t.flags.includes("final")
+      );
+    if (id === "cleaner")
+      return (
+        room.rollCount === 1 &&
+        !!ap!.progress?.cleanerVoucher &&
+        !t.flags.includes("final")
+      );
     if (id === "cat")
       return (
-        t.maxRolls > 1 &&
         room.rollCount >= t.maxRolls &&
         !t.oldWorld &&
         !t.flags.includes("final")
@@ -308,6 +380,15 @@ export function AugmentPanel({
   };
   return (
     <div className="augment-panel">
+      <NovelAugmentStatus room={room} player={p} />
+      {myTurn &&
+        monsterIndex(room) !== undefined &&
+        room.rollPhase === "idle" &&
+        room.rollCount > 0 && (
+          <button className="primary" onClick={() => open("monster")}>
+            괴물 분열 · 채점 전에 선택
+          </button>
+        )}
       {myTurn &&
         t.pending &&
         createPortal(
@@ -323,39 +404,27 @@ export function AugmentPanel({
         createPortal(
           <div
             className={`augment-result-burst ${resultBurst.activation ? "activation-burst" : ""}`}
+            data-level={resultBurst.presentation?.level}
             data-kind={resultBurst.activation?.kind}
             data-rarity={resultBurst.activation?.rarity}
             data-flash={resultBurst.activation?.flash}
             role="status"
             key={resultBurst.key}
           >
-            {resultBurst.activation ? (
-              <AugmentActivation activation={resultBurst.activation} />
-            ) : (
-              <>
-                <span aria-hidden="true">✦</span>
-                <strong>{resultBurst.text}</strong>
-              </>
-            )}
-            <button
-              type="button"
-              aria-label="지급 알림 닫기"
-              onClick={() => setResultBurst(undefined)}
-            >
+            <AugmentEvent result={resultBurst} room={room} />
+            <button type="button" aria-label="지급 알림 닫기" onClick={fx.skip}>
               ×
             </button>
           </div>,
           document.body,
         )}
-      {burst &&
-        !resultBurst &&
-        createPortal(
-          <div className="augment-burst" role="status" key={burst}>
-            {burst}
-          </div>,
-          document.body,
-        )}
       <div className="augment-status">
+        <button onClick={fx.toggle} aria-pressed={fx.muted}>
+          {fx.muted ? "연출 꺼짐" : "연출 켜짐"}
+        </button>
+        {fx.queued > 1 && (
+          <button onClick={fx.skipAll}>연출 넘기기 ({fx.queued})</button>
+        )}
         {ap?.rollBank !== undefined && !myTurn && (
           <span>몰빵 잔고 {ap.rollBank}회 · 다음 내 턴에 사용</span>
         )}
@@ -428,13 +497,24 @@ export function AugmentPanel({
               </div>
               {ap.offers.length ? (
                 <>
-                  <div className="augment-offers">
+                  <div className="augment-offers" data-count={ap.offers.length}>
                     {ap.offers.map((id, offerIndex) => (
-                      <div className="augment-offer-slot" key={offerIndex}>
+                      <OfferSlot
+                        flash={offerIndex === 3}
+                        rarity={AUGMENTS.find((d) => d.id === id)?.rarity}
+                        draft={`${room.roomId}:${a.round}:${playerId}`}
+                        muted={fx.muted}
+                        key={`${a.round}:${offerIndex}`}
+                      >
+                        {offerIndex === 3 && (
+                          <strong className="flash-bonus-label">
+                            ✦ 번뜩임 보너스 · 4번째 선택지
+                          </strong>
+                        )}
                         <Card
                           key={id}
                           def={AUGMENTS.find((d) => d.id === id)!}
-                          detail={`${AUGMENTS.find((d) => d.id === id)!.description} · 남은 ${12 - Object.values(p.scores).filter((n) => n !== null).length}턴${id === "hunter" ? ` · 포커/요트 ${["fourOfAKind", "yacht"].filter((k) => p.scores[k as ScoreCategory] === null).length}칸` : id === "defect" ? ` · 적용 가능한 하단 ${SCORE_CATEGORIES.slice(7).filter((k) => p.scores[k] === null).length}칸` : ""}`}
+                          detail={`${AUGMENTS.find((d) => d.id === id)!.description} · 남은 ${12 - Object.values(p.scores).filter((n) => n !== null).length}턴${id === "defect" ? ` · 적용 가능한 하단 ${SCORE_CATEGORIES.slice(7).filter((k) => p.scores[k] === null).length}칸` : ""}`}
                           disabled={disabled}
                           action="이 증강 선택"
                           onClick={() => onCommand({ op: "pick", id })}
@@ -444,7 +524,7 @@ export function AugmentPanel({
                           data-spent={ap.rerolled[offerIndex]}
                           disabled={disabled || ap.rerolled[offerIndex]}
                           aria-label={`${offerIndex + 1}번 증강 ${AUGMENTS.find((d) => d.id === id)!.name} ${ap.rerolled[offerIndex] ? "리롤 완료" : "리롤"}`}
-                          title="이 카드만 같은 등급의 다른 증강으로 교체합니다. 다른 두 카드는 유지돼요."
+                          title="이 카드만 같은 등급으로 교체합니다. 일반은 일반끼리, 번뜩임은 번뜩임끼리 바뀌며 다른 카드는 유지돼요."
                           onClick={() =>
                             onCommand({ op: "refresh", offerIndex, id })
                           }
@@ -463,12 +543,12 @@ export function AugmentPanel({
                             </small>
                           </span>
                         </button>
-                      </div>
+                      </OfferSlot>
                     ))}
                   </div>
                   <p className="augment-reroll-summary" role="status">
-                    ↻ 리롤 가능한 카드 {ap.rerolled.filter((v) => !v).length}/3
-                    · 다음 증강 선택 때 다시 충전돼요.
+                    ↻ 리롤 가능한 카드 {ap.rerolled.filter((v) => !v).length}/
+                    {ap.offers.length}· 다음 증강 선택 때 다시 충전돼요.
                   </p>
                   {a.round === 7 && ap.items.some((i) => i.id === "nudge") && (
                     <Card
@@ -551,8 +631,8 @@ export function AugmentPanel({
               ))}
               <small>
                 {duel.accepted
-                  ? "승부 성립! 각자 최대 2번 · 승자 +35 / 패자 -10 / 동점 각각 +10점"
-                  : "상대 응답 대기 · 거절하면 내게 10점과 다음 턴 굴림 +1회"}
+                  ? "승부 성립! 각자 최대 2번 · 승자 +40 / 패자 -10 / 동점 각각 +15점"
+                  : "상대 응답 대기 · 거절하면 내게 15점 납부 + 별도 보너스 10점"}
               </small>
             </article>
           ))}
@@ -628,21 +708,34 @@ export function AugmentPanel({
           </p>
           <ol>
             {[...a.results].reverse().map((result) => (
-              <li key={result.key}>{result.text}</li>
+              <li key={result.key}>
+                {result.text}
+                {result.presentation?.players
+                  .filter((q) => q.before !== q.after)
+                  .map((q) => (
+                    <small key={q.id}>
+                      {" "}
+                      · {q.name} {q.before} → {q.after} (
+                      {q.after > q.before ? "+" : ""}
+                      {q.after - q.before}점)
+                    </small>
+                  ))}
+              </li>
             ))}
           </ol>
         </details>
       )}
-      {myTurn && (t.erase || t.parallel) && (
+      {myTurn && t.parallel && (
         <p className="augment-use-hint" role="status">
           ⏳ 점수 확정 시 적용 · 아직 지급 전<br />
-          {t.erase === "bonus"
-            ? "지워진 0: 대체 보너스 +20점 예약"
-            : t.erase
-              ? "지워진 0: 기존 0점 칸 재채점 예약"
-              : ""}
           {t.parallel
-            ? `${t.erase ? " · " : ""}한 턴에 두 탕: ${SCORE_LABELS[t.parallel as ScoreCategory]} 전액 보너스 예약 · 최대 40점`
+            ? `한 턴에 두 탕: ${SCORE_LABELS[t.parallel as ScoreCategory]} 별도 +${Math.min(
+                40,
+                categoryScore(
+                  t.parallel as ScoreCategory,
+                  room.dice.map((n) => n ?? 0),
+                ),
+              )}점 예약 · 다른 빈 칸에 기록하세요 · 선택한 칸 유지`
             : ""}
         </p>
       )}
@@ -654,50 +747,105 @@ export function AugmentPanel({
               key={`${item.id}-${i}`}
               def={d}
               ready={available(item.id)}
-              action={
-                d.trigger === "passive"
-                  ? "자동 적용 · 설명"
+              status={
+                d.trigger !== "active"
+                  ? undefined
                   : available(item.id)
-                    ? "사용하기"
-                    : "설명 보기"
+                    ? "● 지금 사용 가능"
+                    : item.remaining === 0
+                      ? "사용 횟수 소진"
+                      : item.usedTurn === t.serial
+                        ? "이번 턴에 사용했어요"
+                        : goldDisabled(p, item.id)
+                          ? "방해 효과로 이번 턴 사용 중지"
+                          : a.drafting
+                            ? "모두 증강을 선택하면 시작해요"
+                            : !myTurn
+                              ? "내 턴에 사용할 수 있어요"
+                              : disabled || room.rollPhase !== "idle"
+                                ? "주사위가 멈출 때까지 기다려 주세요"
+                                : t.pending ||
+                                    t.reroll ||
+                                    t.chooseOld ||
+                                    t.oldWorld
+                                  ? "진행 중인 선택을 먼저 마쳐 주세요"
+                                  : before.includes(item.id) &&
+                                      room.rollCount > 0
+                                    ? "첫 굴림 전에 사용하세요"
+                                    : !room.rollCount
+                                      ? "주사위를 먼저 굴려 주세요"
+                                      : "사용 조건 미충족 · 눌러서 조건 확인"
+              }
+              action={
+                item.id === "cashNow"
+                  ? "지급 완료 · 설명"
+                  : d.trigger === "passive"
+                    ? "자동 적용 · 설명"
+                    : available(item.id)
+                      ? "사용하기"
+                      : "설명 보기"
               }
               onClick={() => open(item.id)}
               detail={
-                item.id === "revive"
-                  ? `보유 ${item.remaining}회 · 이 카드 ${item.uses ?? 0}/3회 사용`
-                  : item.id === "savings"
-                    ? `현재 ${Math.min(3, ap.streak)}/3연속 · ${ap.progress?.savings ?? 0}/3회 지급`
-                    : item.id === "loser"
-                      ? `이 카드 ${item.uses ?? 0}/3턴 발동`
-                      : item.id === "parasite" && item.target
-                        ? `${room.players.find((q) => q?.id === item.target)?.nickname ?? "나간 플레이어"}와 계약 · 누적 +${item.earned ?? 0}/36점`
-                        : item.id === "stubborn"
-                          ? myTurn
-                            ? `보관 유지 ${t.kept.length}개 · 금고 ${t.kept.length >= 2 ? Math.min(9, Math.max(0, room.rollCount - 1) * 3) : 0}점`
-                            : "다음 내 턴에 금고를 채워요"
-                          : item.id === "clockwork"
-                            ? `${myTurn ? `이번 올인 ${t.flags.filter((f) => f.startsWith("allInRoll:")).length}회 · ` : ""}누적 +${ap.progress?.clockwork ?? 0}/36점`
-                            : item.borrowedAt !== undefined
-                              ? `대여 · ${item.remaining}회 남음 · 다음 내 턴 끝에 반납`
-                              : goldDisabled(p, item.id)
-                                ? "이번 턴 사용 중지 · 종료 후 복구"
-                                : d.trigger === "passive"
-                                  ? ["savings", "loser"].includes(item.id)
-                                    ? `${ap.progress?.[item.id] ?? 0}/3회 발동 · 자동 적용`
-                                    : ["spectator", "parasite"].includes(
-                                          item.id,
-                                        )
-                                      ? `누적 +${ap.progress?.[item.id] ?? 0}/${item.id === "spectator" ? 24 : 40}점`
-                                      : "자동 발동 · 눌러 설명"
-                                  : item.remaining === 0
-                                    ? ["artisan", "fakeHouse"].includes(item.id)
-                                      ? "조작 완료 · 자동 효과 유지"
-                                      : "모두 사용했어요"
-                                    : item.usedTurn === t.serial
-                                      ? `이번 턴 사용 완료${item.remaining > 0 ? ` · ${item.remaining}회 남음` : ""}`
-                                      : item.remaining > 0
-                                        ? `${item.remaining}회 남음`
-                                        : "턴당 1회"
+                item.id === "cleaner"
+                  ? `자동 +6점 유지 · 청소권 ${ap.progress?.cleanerVoucher ?? 0}장 · 발급 ${ap.progress?.cleanerCreated ?? 0}/2장`
+                  : item.id === "erase"
+                    ? `보충 지급 +${ap.progress?.erase ?? 0}/45점`
+                    : item.id === "hunter"
+                      ? `사냥 보너스 +${item.earned ?? 0}/36점`
+                      : item.id === "customDie" && ap.customFaces
+                        ? `인쇄 완료 · 이번 턴만 적용 · ${ap.customFaces.join(" / ")}`
+                        : item.id === "estate" && ap.estate
+                          ? `부지 ${ap.estate.completed.length}/3곳 완공 · +${ap.estate.paid}/32점 지급`
+                          : item.id === "monster" &&
+                              myTurn &&
+                              monsterIndex(room) !== undefined
+                            ? "괴물이 굴러요 · 멈춘 뒤 분열 조합 선택"
+                            : item.id === "cashNow"
+                              ? `증강 보너스 +${item.earned ?? 20}점 지급 완료 · 추가 발동 없음`
+                              : item.id === "revive"
+                                ? `보유 ${item.remaining}회 · 이 카드 ${item.uses ?? 0}/3회 사용`
+                                : item.id === "savings"
+                                  ? `현재 ${Math.min(3, ap.streak)}/3연속 · ${ap.progress?.savings ?? 0}/2회 지급`
+                                  : item.id === "loser"
+                                    ? `이 카드 ${item.uses ?? 0}/3턴 발동`
+                                    : item.id === "parasite" && item.target
+                                      ? `${room.players.find((q) => q?.id === item.target)?.nickname ?? "나간 플레이어"}와 계약 · 누적 +${item.earned ?? 0}/40점`
+                                      : item.id === "stubborn"
+                                        ? myTurn
+                                          ? `보관 유지 ${t.kept.length}개 · 금고 ${t.kept.length >= 2 ? Math.min(9, Math.max(0, room.rollCount - 1) * 3) : 0}점`
+                                          : "다음 내 턴에 금고를 채워요"
+                                        : item.id === "clockwork"
+                                          ? `${myTurn ? `이번 올인 ${t.flags.filter((f) => f.startsWith("allInRoll:")).length}회 · ` : ""}누적 +${ap.progress?.clockwork ?? 0}/36점`
+                                          : item.borrowedAt !== undefined
+                                            ? `대여 · ${item.remaining}회 남음 · 다음 내 턴 끝에 반납`
+                                            : goldDisabled(p, item.id)
+                                              ? "이번 턴 사용 중지 · 종료 후 복구"
+                                              : d.trigger === "passive"
+                                                ? ["savings", "loser"].includes(
+                                                    item.id,
+                                                  )
+                                                  ? `${ap.progress?.[item.id] ?? 0}/3회 발동 · 자동 적용`
+                                                  : [
+                                                        "spectator",
+                                                        "parasite",
+                                                      ].includes(item.id)
+                                                    ? `누적 +${ap.progress?.[item.id] ?? 0}/${item.id === "spectator" ? 28 : 40}점`
+                                                    : "자동 발동 · 눌러 설명"
+                                                : item.remaining === 0
+                                                  ? [
+                                                      "artisan",
+                                                      "fakeHouse",
+                                                      "odd",
+                                                      "six",
+                                                    ].includes(item.id)
+                                                    ? "조작 완료 · 자동 효과 유지"
+                                                    : "모두 사용했어요"
+                                                  : item.usedTurn === t.serial
+                                                    ? `이번 턴 사용 완료${item.remaining > 0 ? ` · ${item.remaining}회 남음` : ""}`
+                                                    : item.remaining > 0
+                                                      ? `${item.remaining}회 남음`
+                                                      : "턴당 1회"
               }
             />
           );
@@ -709,11 +857,22 @@ export function AugmentPanel({
           const curse = q!.augment!.curse!;
           return (
             <p className="augment-warning" key={q!.id}>
-              ⚠ {q!.nickname} · {AUGMENTS.find((d) => d.id === curse.id)?.name}{" "}
+              ⚠{" "}
+              {room.players.find((p) => p?.id === curse.from)?.nickname ??
+                "상대"}{" "}
+              → {q!.nickname} · {AUGMENTS.find((d) => d.id === curse.id)?.name}{" "}
               ·{" "}
               {curse.active
                 ? "적용 중 · 이번 턴 끝에 해제"
                 : "예약됨 · 다음 개인 턴"}
+              <small className="curse-description">
+                {AUGMENTS.find((d) => d.id === curse.id)?.description}
+              </small>
+              <small>
+                {curse.id === "hostage"
+                  ? "첫 굴림 뒤 몸값 지불 / 봉인 중 선택"
+                  : "이미 예약된 효과입니다. 적용 조건을 보고 이번 턴 전략을 정하세요."}
+              </small>
               {curse.categories
                 ? ` · 기록 가능: ${SCORE_CATEGORIES.filter(
                     (k) =>
@@ -806,8 +965,9 @@ export function AugmentPanel({
                   <h2>운명의 주사위 · 증강 도감</h2>
                   <p>실버 → 골드 → 골드 → 프리즘 · 1·4·7·10라운드 선택</p>
                   <p>
-                    번뜩임은 각 선택 단계에 10% 확률로 한 장 섞여요.
-                    새로고침으로 당첨 여부를 다시 뽑지는 않아요.
+                    번뜩임은 실버 8% · 첫 골드 12% · 두 번째 골드 14% · 프리즘
+                    12% 확률로 네 번째 보너스 카드가 나와요. 새로고침으로 당첨
+                    여부를 다시 뽑지는 않아요.
                   </p>
                   <div className="augment-catalog-tools">
                     <label>
@@ -869,7 +1029,12 @@ export function AugmentPanel({
                   </div>
                   <div className="augment-catalog">
                     {catalogCards.map((d) => (
-                      <Card key={d.id} def={d} />
+                      <Card
+                        key={d.id}
+                        def={d}
+                        onClick={() => open(d.id)}
+                        action="자세한 규칙"
+                      />
                     ))}
                   </div>
                   <p className="augment-search-status" role="status">
@@ -917,6 +1082,13 @@ export function AugmentPanel({
                         ? "하나의 세계를 확정하면 더 이상 일반 굴림을 할 수 없습니다."
                         : "")}
                   </p>
+                  {!!def?.details?.length && (
+                    <ul className="augment-rule-details">
+                      {def.details.map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  )}
                   {def?.trigger === "active" && !available(def.id) && (
                     <p className="augment-use-hint" role="status">
                       {disabled
@@ -938,12 +1110,24 @@ export function AugmentPanel({
                                   : before.includes(def.id) &&
                                       room.rollCount > 0
                                     ? "첫 굴림 전에 사용하는 능력이에요. 다음 턴에 사용하세요."
-                                    : !room.rollCount
-                                      ? "먼저 주사위를 굴려주세요."
-                                      : "사용 조건을 확인하세요. 진행 중인 결과 선택을 먼저 마쳐야 해요."}
+                                    : [
+                                          "customDie",
+                                          "estate",
+                                          "monster",
+                                          "crown",
+                                        ].includes(def.id) && room.rollCount > 0
+                                      ? "첫 굴림 전에 사용할 수 있어요."
+                                      : def.id === "cleaner"
+                                        ? "청소권이 있고 첫 굴림에 1이 나왔을 때 사용하세요."
+                                        : def.id === "lifebuoy"
+                                          ? "첫 굴림 직후, 다른 능력으로 눈을 바꾸기 전에 사용하세요."
+                                          : !room.rollCount
+                                            ? "먼저 주사위를 굴려주세요."
+                                            : "사용 조건을 확인하세요. 진행 중인 결과 선택을 먼저 마쳐야 해요."}
                     </p>
                   )}
                   {!NEW_INPUTS.includes(selected ?? "") &&
+                    !NOVEL_IDS.includes(selected ?? "") &&
                     (def?.flash || MISCHIEF_IDS.includes(selected ?? "")) && (
                       <FlashInputs
                         key={selected}
@@ -954,6 +1138,16 @@ export function AugmentPanel({
                         onUse={submit}
                       />
                     )}
+                  {NOVEL_IDS.includes(selected!) && (
+                    <NovelAugmentInputs
+                      key={selected}
+                      room={room}
+                      player={p}
+                      id={selected!}
+                      enabled={available(selected!)}
+                      onUse={submit}
+                    />
+                  )}
                   {NEW_INPUTS.includes(selected!) && (
                     <NewAugmentInputs
                       key={selected}
@@ -994,7 +1188,8 @@ export function AugmentPanel({
                       ))}
                     </div>
                   )}
-                  {NEW_INPUTS.includes(selected ?? "") ||
+                  {NOVEL_IDS.includes(selected ?? "") ||
+                  NEW_INPUTS.includes(selected ?? "") ||
                   def?.flash ||
                   MISCHIEF_IDS.includes(selected ?? "") ||
                   DIRECT_INPUT_IDS.includes(selected!) ||

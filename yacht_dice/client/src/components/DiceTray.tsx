@@ -1,3 +1,4 @@
+import type { AugmentResult } from "../hooks/useAugmentEffects";
 import type { MotionStream } from "../dice/motion";
 import type { RoomState } from "@yacht/shared";
 import type { RollPhase } from "../feedback/qualifications";
@@ -38,6 +39,10 @@ const PIP_POSITIONS = [
   ],
 ];
 type Props = {
+  augmentEvent?: AugmentResult;
+  faces?: number[][];
+  monster?: number;
+  childIndex?: number;
   motion?: MotionStream;
   dice: RoomState["dice"];
   held: RoomState["held"];
@@ -51,6 +56,10 @@ type Props = {
   onHolds: (held: RoomState["held"]) => void;
 };
 export function DiceTray({
+  augmentEvent,
+  faces,
+  monster,
+  childIndex,
   motion,
   dice,
   held,
@@ -84,6 +93,9 @@ export function DiceTray({
         </span>
       </div>
       <DiceCup
+        faces={faces}
+        monster={monster}
+        childIndex={childIndex}
         motion={motion}
         dice={dice}
         held={held}
@@ -105,12 +117,20 @@ export function DiceTray({
           const displayValue = value;
           return (
             <button
+              data-augment-change={
+                (phase === "idle" &&
+                  (augmentEvent?.presentation?.dice.some(
+                    (d) => d.index === i,
+                  ) ||
+                    augmentEvent?.presentation?.rerollIndices.includes(i))) ||
+                undefined
+              }
               className={`die ${held[i] ? "held" : ""} ${bombIndex === i ? "bomb-die" : ""} ${sealedIndices.includes(i) ? "sealed-die" : ""}`}
               title={
                 bombIndex === i
-                  ? "다시 굴리면 상대 +3점 · 그대로 기록하면 내 점수 -4점"
+                  ? "다시 굴리면 상대 +8점 · 그대로 기록하면 내 점수 -8점"
                   : sealedIndices.includes(i)
-                    ? "이번 턴 내내 1로 봉인 · 눈 변경과 재굴림 불가"
+                    ? `이번 턴 내내 ${value}로 봉인 · 눈 변경과 재굴림 불가`
                     : undefined
               }
               key={i}
@@ -123,6 +143,14 @@ export function DiceTray({
               }
               onClick={() => toggle(i)}
             >
+              {phase === "idle" &&
+                augmentEvent?.presentation?.dice
+                  .filter((d) => d.index === i)
+                  .map((d) => (
+                    <span className="die-effect-label" key={augmentEvent.key}>
+                      {d.before ?? "?"} → {d.after ?? "?"}
+                    </span>
+                  ))}
               <strong className="die-value" aria-hidden="true">
                 {displayValue ?? "—"}
               </strong>
@@ -147,11 +175,23 @@ export function DiceTray({
                     className="die-surface"
                   />
                   <g className="die-pips">
-                    {(PIP_POSITIONS[displayValue ?? 0] ?? []).map(
-                      ([cx, cy], index) => (
-                        <circle key={index} cx={cx} cy={cy} r="4.5" />
-                      ),
+                    {i === monster && (
+                      <text
+                        x="30"
+                        y="38"
+                        textAnchor="middle"
+                        fontSize="24"
+                        fill="#40245b"
+                      >
+                        {displayValue ?? "?"}
+                      </text>
                     )}
+                    {(i === monster
+                      ? []
+                      : (PIP_POSITIONS[displayValue ?? 0] ?? [])
+                    ).map(([cx, cy], index) => (
+                      <circle key={index} cx={cx} cy={cy} r="4.5" />
+                    ))}
                   </g>
                   {displayValue === null && (
                     <path d="M22 30h16" stroke="currentColor" strokeWidth="3" />
@@ -159,17 +199,23 @@ export function DiceTray({
                 </svg>
               </span>
               <small>
-                {sealedIndices.includes(i)
-                  ? "🔒 1로 봉인"
-                  : bombIndex === i
-                    ? "💣 폭탄"
-                    : lockedIndices.includes(i)
-                      ? "🔒 강제 보관"
-                      : held[i]
-                        ? "보관 중"
-                        : value
-                          ? "보관하기"
-                          : "대기"}
+                {i === childIndex
+                  ? "🍼 공동 주사위"
+                  : i === monster
+                    ? "👾 12면체"
+                    : i === 0 && faces
+                      ? "🔧 개조 주사위"
+                      : sealedIndices.includes(i)
+                        ? "🔒 1로 봉인"
+                        : bombIndex === i
+                          ? "💣 폭탄"
+                          : lockedIndices.includes(i)
+                            ? "🔒 강제 보관"
+                            : held[i]
+                              ? "보관 중"
+                              : value
+                                ? "보관하기"
+                                : "대기"}
               </small>
             </button>
           );

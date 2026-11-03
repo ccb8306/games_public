@@ -1,6 +1,7 @@
 import { augmentPlayerSchema, augmentStateSchema, augmentCommandSchema } from "./augments.js";
 export * from "./augments.js";
 export * from "./augment-game.js";
+export * from "./novelty.js";
 import { motionSchema } from "./motion.js";
 export { motionSchema, FACE_ORDER, type Pose, type MotionFrame } from "./motion.js";
 import { z } from "zod";
@@ -59,9 +60,9 @@ export const chatMessageSchema = z.strictObject({
 });
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 const reconnectTokenSchema = z.string().min(32).max(256);
-const dieSchema = z.number().int().min(1).max(6);
-const diceSchema = z.array(dieSchema.nullable()).min(4).max(10);
-const heldSchema = z.array(z.boolean()).min(4).max(10);
+const dieSchema = z.number().int().min(1).max(12);
+const diceSchema = z.array(dieSchema.nullable()).min(3).max(10);
+const heldSchema = z.array(z.boolean()).min(3).max(10);
 
 export const scorecardSchema = z.record(scoreCategorySchema, z.number().int().nonnegative().nullable());
 export type Scorecard = z.infer<typeof scorecardSchema>;
@@ -103,6 +104,8 @@ export const roomStateSchema = z.strictObject({
     z.strictObject({ kind: z.literal("abandoned"), reason: z.literal("disconnect") }),
   ]).nullable(),
 }).superRefine((room, ctx) => {
+  const monster=room.augment?.turn.monster;const index=monster&&!monster.split?monster.index:-1;
+  if(room.dice.some((v,i)=>v!==null&&v>6&&i!==index)||room.dice.length<4&&index<0)ctx.addIssue({code:'custom',message:'괴물 주사위만 7~12 눈을 가질 수 있습니다.'});
   if(room.dice.length!==room.held.length || (!room.augment && (room.dice.length!==5 || room.rollCount>3)))ctx.addIssue({code:"custom",message:"모드에 맞지 않는 주사위 상태입니다."});
   if (room.players.length !== room.capacity) ctx.addIssue({ code: "custom", message: "정원과 자리 수가 다릅니다." });
   const ids = new Set<string>();

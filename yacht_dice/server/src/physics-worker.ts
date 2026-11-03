@@ -9,6 +9,8 @@ export type PhysicsCommand =
       held: RoomState["held"];
       dice: RoomState["dice"];
       poses?: Pose[];
+      faces?:number[];
+      monster?:number;
     }
   | { type: "stop" | "cancel"; roomId: string; id: string }
   | { type: "pause"; roomId: string; id: string; paused: boolean };
@@ -76,6 +78,8 @@ parentPort!.on("message", (command: PhysicsCommand) => {
         command.dice,
         undefined,
         command.poses,
+        command.faces,
+        command.monster,
       );
       sim.seq = 1;
       jobs.set(command.roomId, { sim, frames: [] });

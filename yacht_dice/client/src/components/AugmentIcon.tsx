@@ -6,6 +6,17 @@ export function AugmentIcon({ id }: { id: string }) {
   const n = AUGMENTS.findIndex((a) => a.id === id),
     seed = Math.max(0, n);
   const motifs: Record<string, string> = {
+    customDie:
+      "M18 20h28v28H18ZM24 27h0m16 14h0M28 32l12-12m-5-3 8 8M17 12l4 4m26-4-4 4",
+    monster:
+      "M32 12 49 24l-6 22H21L15 24ZM15 24h34M21 46l11-22 11 22M24 29l3 5m13-5-3 5M27 40h10",
+    custody:
+      "M20 22a8 8 0 1 0 .1 0M44 22a8 8 0 1 0 .1 0M19 40h26v11H19ZM27 45h0m10 0h0M32 17v10m-5-5h10",
+    estate:
+      "M15 46h34M19 46V28h10v18m6 0V17h10v29M22 34h3m-3 6h3m13-16h4m-4 7h4m-4 7h4",
+    crown: "M15 22l10 10 7-16 7 16 10-10-5 24H20ZM22 51h20M32 38h0",
+    cashNow:
+      "M14 22h36v24H14ZM20 28h0m24 12h0M32 27a7 7 0 1 0 .1 0M21 17h22M27 12h16",
     rollVault:
       "M18 18h28v30H18ZM23 24h18v10H23ZM27 40h10M32 37v7M24 28h0m8 0h0m8 0h0",
     scoreRemodel:

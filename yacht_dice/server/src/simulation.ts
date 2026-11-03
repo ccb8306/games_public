@@ -1,4 +1,4 @@
-import { Quaternion, Vec3, type Body } from "cannon-es";
+import { Quaternion, Vec3, ConvexPolyhedron, type Body } from "cannon-es";
 import { randomInt } from "node:crypto";
 import type { MotionFrame, Pose, RoomState } from "@yacht/shared";
 import {
@@ -19,7 +19,7 @@ const normals = [
 export function topFace(body: Body) {
   let face = 1,
     dot = -1;
-  normals.forEach((normal, i) => {
+  (body.shapes[0] instanceof ConvexPolyhedron?body.shapes[0].faceNormals:normals).forEach((normal, i) => {
     const y = body.quaternion.vmult(normal).y;
     if (y > dot) {
       face = i + 1;
@@ -72,12 +72,14 @@ export class Simulation {
     readonly previousDice: RoomState["dice"],
     seed?: number,
     previousPoses?: Pose[],
+    readonly faces?:number[],
+    readonly monster?:number,
   ) {
     this.random =
       seed === undefined
         ? () => randomInt(0x100000000) / 0x100000000
         : seededRandom(seed);
-    this.physics = createDicePhysics(this.random, held.length);
+    this.physics = createDicePhysics(this.random, held.length,monster);
     previousPoses?.forEach((pose, i) => {
       const body = this.physics.bodies[i]!;
       body.position.set(...pose.p);
@@ -167,7 +169,7 @@ export class Simulation {
   }
   values(): RoomState["dice"] {
     return this.physics.bodies.map((b, i) =>
-      this.held[i] ? this.previousDice[i] : topFace(b).face,
+      this.held[i] ? this.previousDice[i] : i!==this.monster&&this.faces?this.faces[topFace(b).face-1]:topFace(b).face,
     ) as RoomState["dice"];
   }
   frame(at: number): MotionFrame {

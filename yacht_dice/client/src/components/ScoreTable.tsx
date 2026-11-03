@@ -1,3 +1,4 @@
+import type { AugmentResult } from "../hooks/useAugmentEffects";
 import { useRef, type ReactNode } from "react";
 import { AvatarImage } from "./AvatarImage";
 import { PlayerAugments } from "./PlayerAugments";
@@ -15,6 +16,7 @@ import { SCORE_LABELS } from "../scoreLabels";
 import { describeScore, compactScore } from "../scoreBreakdown";
 import type { Qualification, RecordedScore } from "../feedback/qualifications";
 type Props = {
+  augmentEvent?: AugmentResult;
   room: RoomState;
   playerId?: string;
   selected: ScoreCategory | null;
@@ -26,6 +28,7 @@ type Props = {
   recorded?: RecordedScore | null;
 };
 export function ScoreTable({
+  augmentEvent,
   room,
   playerId,
   selected,
@@ -57,6 +60,12 @@ export function ScoreTable({
         <td
           key={i}
           data-category={category}
+          data-player-id={p.id}
+          data-augment-change={
+            augmentEvent?.presentation?.cells.some(
+              (c) => c.playerId === p.id && c.category === category,
+            ) || undefined
+          }
           data-highlight={
             p?.id === room.currentPlayerId
               ? qualifications.find((q) => q.category === category)?.highlight
@@ -142,6 +151,7 @@ export function ScoreTable({
               {players.map((p, i) => (
                 <th
                   scope="col"
+                  data-player-id={p.id}
                   key={i}
                   className={p?.id === playerId ? "mine" : ""}
                 >

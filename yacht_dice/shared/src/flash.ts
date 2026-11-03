@@ -30,6 +30,15 @@ export function flashTargets(s: RoomState, p: PublicPlayer, c: AugmentCommand) {
     alive = s.players.filter((q): q is PublicPlayer => !!q && !q.forfeited);
   const opponent = (target?: string) =>
     alive.find((q) => q.id === target && q.id !== p.id && remaining(q).length);
+  if(id==='monster')return [{q:p,categories:undefined,other:undefined}];
+  if(id==='crown'){
+    if(s.augment!.crown||alive.some(q=>remaining(q).length<2))throw Error('왕관 행사를 열 수 없어요.');
+    return alive.map(q=>({q,categories:undefined,other:undefined}));
+  }
+  if(id==='custody'){
+    const q=opponent(c.target);if(!q||q.augment!.curse||remaining(q).length<2||remaining(p).length<2||s.augment!.custody?.some(l=>[l.a,l.b].some(id=>id===p.id||id===q.id)))throw Error('공동 육아 대상이 없어요.');
+    return [{q,categories:undefined,other:undefined}];
+  }
   if (id === "handsUp") {
     const targets=alive.filter(q=>q.id!==p.id&&remaining(q).length&&!q.augment!.curse);
     if(!targets.length) throw Error("방해를 예약할 상대가 없어요.");
@@ -40,7 +49,7 @@ export function flashTargets(s: RoomState, p: PublicPlayer, c: AugmentCommand) {
     const key = c.category as (typeof SCORE_CATEGORIES)[number];
     if (!SCORE_CATEGORIES.slice(6).includes(key)) throw Error("회전할 하단 칸을 고르세요.");
     const eligible = alive.filter((q) => q.scores[key] !== null && !q.augment!.scoreSwapped);
-    if (eligible.length < 2 || !eligible.includes(p)) throw Error("나를 포함해 아직 교환당하지 않은 두 명 이상이 기록한 칸이 필요해요.");
+    if (eligible.length < 3 || !eligible.includes(p)) throw Error("나를 포함해 아직 교환당하지 않은 세 명 이상이 기록한 칸이 필요해요.");
     return eligible.sort((a,b)=>a.slot-b.slot).map(q=>({q,categories:[key],other:undefined}));
   }
   if (id === "squid") {

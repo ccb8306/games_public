@@ -1,4 +1,5 @@
-import { Body, Box, Vec3, World, Quaternion, SAPBroadphase } from "cannon-es";
+import { Body, Box, Vec3, World, Quaternion, SAPBroadphase, ConvexPolyhedron } from "cannon-es";
+import {D12} from '@yacht/shared';
 
 // BoxGeometry material order: +X, -X, +Y, -Y, +Z, -Z.
 export const FACE_ORDER = [3, 4, 1, 6, 2, 5];
@@ -39,7 +40,7 @@ export function faceUp(face: number, yaw = 0): Quaternion {
 }
 
 /** Authoritative collision world; no result is imposed after a throw. */
-export function createDicePhysics(random: () => number, count = 5) {
+export function createDicePhysics(random: () => number, count = 5, monster?:number) {
   const world = new World({ gravity: new Vec3(0, -48, 0), allowSleep: true });
   world.broadphase = new SAPBroadphase(world);
   world.defaultContactMaterial.friction = 0.24;
@@ -95,7 +96,7 @@ export function createDicePhysics(random: () => number, count = 5) {
     const body = new Body({
       mass: 1,
       // A small collision skin catches fast impacts before the visible 0.9-unit die clips.
-      shape: new Box(new Vec3(0.48, 0.48, 0.48)),
+      shape: i===monster?new ConvexPolyhedron({vertices:D12.vertices.map(v=>new Vec3(...v)),faces:D12.faces.map(f=>f.indices)}):new Box(new Vec3(0.48, 0.48, 0.48)),
       linearDamping: 0.1,
       angularDamping: 0.12,
     });
@@ -187,6 +188,7 @@ export function createDicePhysics(random: () => number, count = 5) {
             (Math.floor(random() * 4) * Math.PI) / 2,
           ),
         );
+        if(i===monster){body.position.y=i>=(count>8?6:4)?1.92:.92;if(count>8)body.position.x=1.2;}
         body.velocity.set(0, 2, 0);
         body.angularVelocity.set(
           4 + random() * 6,

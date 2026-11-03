@@ -42,6 +42,6 @@ try{
  await actor.locator('.augment-hand button').filter({hasText:'점수판 이사가는 날'}).click();
  await actor.getByLabel('다시 열 하단 칸').selectOption('yacht');
  await actor.getByRole('button',{name:/초이스에 0점/}).click();await actor.waitForTimeout(500);
- assert.equal(room.state.players[0].scores.yacht,null);assert.equal(room.state.players[0].scores.choice,0);assert.equal(room.state.players[0].augment.bonus,50);
+ assert.equal(room.state.players[0].scores.yacht,null);assert.equal(room.state.players[0].scores.choice,0);assert.equal(room.state.players[0].augment.bonus,65);
  assert.deepEqual(errors,[]);console.log('Score preview and remodel UI verified on desktop/mobile');
 }finally{await browser?.close();await app.close();}

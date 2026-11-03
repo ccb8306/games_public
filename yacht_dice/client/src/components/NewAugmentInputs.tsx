@@ -1,6 +1,10 @@
 import { useState, useRef } from "react";
 import {
   useAugment,
+  monsterIndex,
+  SCORE_CATEGORIES,
+  SCORE_LABELS,
+  categoryScore,
   type RoomState,
   type PublicPlayer,
   type AugmentCommand,
@@ -45,17 +49,45 @@ export function NewAugmentInputs({
   const opponents = room.players.filter(
     (p) => p && !p.forfeited && p.id !== player.id,
   );
+  const memoryPreview = (historyIndex: number) => {
+    const copy = structuredClone(room),
+      actor = copy.players.find((p) => p?.id === player.id)!;
+    try {
+      useAugment(
+        copy,
+        actor,
+        { op: "use", id: "memory", historyIndex },
+        () => 0,
+      );
+    } catch (error) {
+      return (error as Error).message;
+    }
+    if (copy.dice.some((n) => n === null))
+      return `복사 후 ${copy.dice.filter((n) => n === null).length}개를 던져야 점수가 확정됩니다.`;
+    return SCORE_CATEGORIES.filter((k) => actor.scores[k] === null)
+      .map(
+        (k) =>
+          `${SCORE_LABELS[k]} 기본 ${categoryScore(k, copy.dice as number[])}점`,
+      )
+      .join(" / ");
+  };
   if (id === "memory")
     return (
       <div className="augment-choice">
-        <p>다시 쓸 기록을 고르세요. 앞에서 최대 5개를 가져와요.</p>
+        <p>
+          다시 쓸 기록을 고르세요. 현재 주사위 수만큼 가져옵니다. 강제 고정은
+          유지하며 부족한 주사위는 굴립니다.
+        </p>
         {(player.augment?.archive ?? []).map((entry, historyIndex) => (
           <button
             key={historyIndex}
             disabled={!legal({ historyIndex })}
             onClick={() => onUse({ historyIndex })}
           >
-            {historyIndex + 1}번째 기록 · {entry.dice.slice(0, 5).join(" · ")}
+            {memoryPreview(historyIndex)}
+            <br />
+            {historyIndex + 1}번째 기록 ·{" "}
+            {entry.dice.slice(0, room.dice.length).join(" · ")}
           </button>
         ))}
         {!player.augment?.archive?.length && (
@@ -219,19 +251,21 @@ export function PendingAugmentChoice({
           <>
             <p>
               {kind === "thief"
-                ? "지금 5점을 내고 끝내거나, 이번 기본 족보 점수의 25%를 납부해요(올림, 최대 15점). 0점이면 납부도 0점!"
-                : "10점을 내고 거절하면 상대의 다음 굴림도 +1회! 수락하면 양쪽 다음 턴 최대 2번. 승자 +35점, 패자 -10점, 동점 각각 +10점."}
+                ? "지금 8점을 내고 끝내거나, 이번 기본 족보 점수의 40%를 납부해요(올림, 최대 18점). 0점이면 납부도 0점!"
+                : "15점을 내고 거절하면 상대는 별도 보너스 10점도 받아요. 수락하면 양쪽 다음 턴 최대 2번. 승자 +40점, 패자 -10점, 동점 각각 +15점."}
             </p>
             <div className="augment-choice">
               <button disabled={!legal(0)} onClick={() => send(0)}>
-                {kind === "thief" ? "5점 내고 끝내기" : "10점 내고 거절"}
+                {kind === "thief" ? "8점 내고 끝내기" : "15점 내고 거절"}
               </button>
               <button
                 className="primary"
                 disabled={!legal(1)}
                 onClick={() => send(1)}
               >
-                {kind === "thief" ? "이번 기록의 25% 납부" : "콜! 승부하자"}
+                {kind === "thief"
+                  ? "이번 기본 기록의 40% 납부"
+                  : "콜! 승부하자"}
               </button>
             </div>
           </>
@@ -266,7 +300,11 @@ export function PendingAugmentChoice({
                 <button
                   key={i}
                   aria-pressed={indices.includes(i)}
-                  disabled={!enabled || t.preheld?.includes(i)}
+                  disabled={
+                    !enabled ||
+                    t.preheld?.includes(i) ||
+                    i === monsterIndex(room)
+                  }
                   onClick={() =>
                     setIndices(
                       indices.includes(i)

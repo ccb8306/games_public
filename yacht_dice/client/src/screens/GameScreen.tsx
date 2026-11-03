@@ -1,6 +1,7 @@
 import { AugmentPanel } from "../components/AugmentPanel";
 import { RoundEventBanner } from "../components/RoundEventBanner";
 import type { AugmentCommand } from "@yacht/shared";
+import { displayedFaces, monsterIndex } from "@yacht/shared";
 import type { MotionStream } from "../dice/motion";
 import { useEffect, useState } from "react";
 import {
@@ -125,6 +126,7 @@ export function GameScreen({
     <div className="game-grid">
       <RoundEventBanner room={room} />
       <ScoreTable
+        augmentEvent={feedback.augmentEffects.current}
         qualifications={feedback.combos}
         recorded={feedback.recorded}
         room={room}
@@ -199,6 +201,10 @@ export function GameScreen({
               </div>
             )}
             <DiceTray
+              augmentEvent={feedback.augmentEffects.current}
+              faces={displayedFaces(room)}
+              monster={monsterIndex(room)}
+              childIndex={room.augment?.turn.childIndex}
               motion={motion}
               phase={feedback.phase}
               holdFeedback={feedback.holds}
@@ -297,6 +303,7 @@ export function GameScreen({
       {room.augment && onAugment && room.phase !== "finished" && (
         <section className="augment-sidebar panel" aria-label="증강과 난장판">
           <AugmentPanel
+            effects={feedback.augmentEffects}
             error={actionError}
             room={room}
             playerId={playerId}

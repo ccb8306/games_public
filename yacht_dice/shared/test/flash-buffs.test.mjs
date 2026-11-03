@@ -5,9 +5,9 @@ import {useAugment,advanceAugment,afterAugmentRoll,recordAugment,scoreBreakdown,
 const use=(s,id,args={})=>useAugment(s,s.players[0],{op:'use',id,...args},()=>0);
 test('silver tax transfers actual damage and practice pays once after successful reroll',()=>{
  const s=fixture(['taxSix']);use(s,'taxSix',{target:s.players[1].id});advanceAugment(s,()=>0);s.dice=[6,6,6,1,1];s.rollCount=1;
- recordAugment(s,s.players[1],'choice');assert.equal(s.players[0].augment.bonus,6);assert.equal(s.players[1].augment.bonus,-6);
+ recordAugment(s,s.players[1],'choice');assert.equal(s.players[0].augment.bonus,9);assert.equal(s.players[1].augment.bonus,-9);
  const x=fixture(['practice']);use(x,'practice',{target:x.players[1].id});advanceAugment(x,()=>0);x.dice=[6,2,3,4,5];x.rollCount=2;afterAugmentRoll(x,()=>0);assert.equal(x.players[0].augment.bonus,0);
- x.rollCount++;x.rollPhase='idle';afterAugmentRoll(x,()=>0);afterAugmentRoll(x,()=>0);assert.equal(x.players[0].augment.bonus,4);
+ x.rollCount++;x.rollPhase='idle';afterAugmentRoll(x,()=>0);afterAugmentRoll(x,()=>0);assert.equal(x.players[0].augment.bonus,6);
 });
 test('mixer protects caster and pays only if a rival is marked; construction leaves exactly two choices',()=>{
  for(const shield of [false,true]){
@@ -24,5 +24,5 @@ test('prism carousel favors caster; gold migration refills only caster and pays 
 test('base and upper credit exclude both separate bonuses and embedded multipliers',()=>{
  const s=fixture(['rest']);s.dice=[6,6,6,6,1];s.rollCount=1;let r=scoreBreakdown(s,s.players[0],'sixes');assert.equal(r.base,24);assert.equal(r.augment,6);assert.equal(r.upperCredit,24);
  give(s.players[0],['devil']);s.rollCount=0;use(s,'devil');s.dice=[6,6,6,6,6];s.rollCount=1;r=scoreBreakdown(s,s.players[0],'sixes');assert.equal(r.base,30);assert.equal(r.recorded,60);assert.equal(r.upperCredit,30);
- s.dice=[6,6,6,6,1];r=scoreBreakdown(s,s.players[0],'sixes');assert.equal(r.base,0);assert.equal(r.recorded,0);assert.equal(r.upperCredit,0);
+ s.dice=[6,6,6,6,1];r=scoreBreakdown(s,s.players[0],'sixes');assert.equal(r.base,24);assert.equal(r.recorded,48);assert.equal(r.upperCredit,24);
 });

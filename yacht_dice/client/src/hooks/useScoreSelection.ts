@@ -87,6 +87,7 @@ export function useScoreSelection({
     : null;
   const canScore =
     canPlay &&
+    !(room.augment?.turn.monster && !room.augment.turn.monster.split) &&
     !room.augment?.turn.fork &&
     !room.augment?.turn.oldWorld &&
     !room.augment?.turn.reroll &&

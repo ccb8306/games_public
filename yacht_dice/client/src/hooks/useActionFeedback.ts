@@ -1,5 +1,6 @@
-import { augmentedScore } from "@yacht/shared";
+import { augmentedScore, monsterIndex } from "@yacht/shared";
 import { useLayoutEffect, useRef, useState } from "react";
+import { useAugmentEffects } from "./useAugmentEffects";
 import { SCORE_CATEGORIES, type RoomState } from "@yacht/shared";
 import {
   FEEDBACK_TIMING,
@@ -36,6 +37,7 @@ export function useActionFeedback({
   snapshotEpoch,
   initialTurnIntro,
 }: Props) {
+  const augmentEffects = useAugmentEffects(room, connected, snapshotEpoch);
   const previous = useRef<Snapshot | null>(null);
   const timers = useRef<
     Partial<
@@ -188,6 +190,7 @@ export function useActionFeedback({
             : "idle";
   const current = room.players.find((p) => p?.id === room.currentPlayerId);
   const combos =
+    monsterIndex(room) === undefined &&
     phase === "result" &&
     current &&
     room.dice.every((n): n is number => n !== null)
@@ -203,6 +206,7 @@ export function useActionFeedback({
         : qualifications(room.dice, current.scores)
       : [];
   return {
+    augmentEffects,
     phase,
     combos,
     recorded,

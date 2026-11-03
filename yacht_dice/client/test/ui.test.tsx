@@ -198,7 +198,7 @@ test("score table shows previews only for playable empty own cells, including ze
   assert.equal((html.match(/class="preview-score"/g) ?? []).length, 11);
   assert.match(html, /요트 \(50\) 50점 선택/);
   assert.match(html, /풀하우스 15점 선택/);
-  assert.match(html, /<td data-category="ones">0<\/td>/);
+  assert.match(html, /<td data-category="ones" data-player-id="a">0<\/td>/);
   const locked = renderToStaticMarkup(
     <ScoreTable
       room={state}

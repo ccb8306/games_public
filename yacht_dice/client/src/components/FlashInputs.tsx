@@ -46,8 +46,8 @@ export function FlashInputs({
     return (
       <div className="augment-direct">
         <p>
-          기록된 하단 점수를 회전합니다. 내 점수도 넘어가요! 방향은 사용 후
-          공개됩니다.
+          방패에 막히지 않는 3명 이상이 필요합니다. 내게 더 높은 점수가 오는
+          방향으로 회전하며, 두 방향이 같으면 무작위입니다.
         </p>
         <div className="augment-choice">
           {SCORE_CATEGORIES.slice(6).map((category) => (
@@ -58,16 +58,28 @@ export function FlashInputs({
             >
               {SCORE_LABELS[category]}
               <small>
-                {room.players
-                  .filter(
-                    (q) =>
-                      q &&
-                      !q.forfeited &&
-                      q.scores[category] !== null &&
-                      !q.augment?.scoreSwapped,
-                  )
-                  .map((q) => `${q!.nickname} ${q!.scores[category]}점`)
-                  .join(" / ")}
+                {(() => {
+                  const copy = structuredClone(room);
+                  try {
+                    useAugment(
+                      copy,
+                      copy.players.find((p) => p?.id === player.id)!,
+                      { op: "use", id, category },
+                      () => 0,
+                    );
+                    return room.players
+                      .filter(
+                        (q) => q && !q.forfeited && q.scores[category] !== null,
+                      )
+                      .map(
+                        (q) =>
+                          `${q!.nickname} ${q!.scores[category]} → ${copy.players.find((p) => p?.id === q!.id)!.scores[category]}점`,
+                      )
+                      .join(" / ");
+                  } catch (e) {
+                    return (e as Error).message;
+                  }
+                })()}
               </small>
             </button>
           ))}

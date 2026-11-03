@@ -35,7 +35,16 @@ export function DiceCup({
   }, []);
   useEffect(() => {
     scene.current?.update(view);
-  }, [view.dice, view.held, view.phase, view.disabled, view.motion]);
+  }, [
+    view.dice,
+    view.held,
+    view.phase,
+    view.disabled,
+    view.motion,
+    view.faces,
+    view.monster,
+    view.childIndex,
+  ]);
   return (
     <div
       className="dice-stage"

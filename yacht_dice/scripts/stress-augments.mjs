@@ -22,7 +22,7 @@ function physical(){
  act({type:'roll'},actor(),true);
  const id=randomUUID(),frame={id,seq:1,at:1,phase:'rest',dice:s.dice.map(()=>({p:[0,.48,0],q:[0,0,0,1]})),cup:null,wind:false,windDirection:0,paused:false};
  s.motion={...frame,phase:'throwing'};
- const values=s.dice.map((value,i)=>s.held[i]?value:random(6)+1);
+ const values=s.dice.map((value,i)=>s.held[i]?value:(s.augment.turn.monster&&!s.augment.turn.monster.split&&s.augment.turn.monster.index===i?random(12)+1:actor().augment.customFaces?actor().augment.customFaces[random(6)]:random(6)+1));
  s=completeRoll(s,values,frame);afterAugmentRoll(s,random);
 }
 function settle(){
@@ -47,9 +47,9 @@ function argumentsFor(id,p){
  const open=SCORE_CATEGORIES.filter(k=>p.scores[k]===null),zero=SCORE_CATEGORIES.filter(k=>p.scores[k]===0);
  const indices=s.dice.map((_,i)=>i),die=random(indices.length),value=random(6)+1;
  const their=q.augment.items.filter(i=>AUGMENTS.find(d=>d.id===i.id).rarity==='gold'),mine=p.augment.items.filter(i=>AUGMENTS.find(d=>d.id===i.id).rarity==='gold');
- return {destination:SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]===null),die:id==='even'?s.dice.indexOf(1):die,value:id==='clone'?random(indices.length):['taste','misdelivery'].includes(id)?(q.augment.lastDice?.[0]??value):value,target:q.id,
+ return {faces:[1,2,3,4,5,6].map(n=>n===value?value%6+1:n),destination:id==='estate'?open.find(k=>!p.augment.estate?.plots.includes(k)):SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]===null),die:id==='even'?s.dice.indexOf(1):die,value:id==='clone'?random(indices.length):['taste','misdelivery'].includes(id)?(q.augment.lastDice?.[0]??value):value,target:q.id,
   historyIndex:p.augment.archive?.length?random(p.augment.archive.length):0,
-  category:id==='scoreRemodel'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null):id==='strike'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&s.players.some(q=>q.id!==p.id&&q.scores[k]!==null&&!q.augment.scoreSwapped)):id==='closed'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&q.scores[k]!==null&&p.scores[k]!==q.scores[k]):id==='swap'?mine[0]?.id:id==='erase'?zero[0]:open[random(open.length)],other:their[0]?.id,
+  category:id==='estate'?p.augment.estate?.ruined[0]:id==='parallel'?SCORE_CATEGORIES[random(12)]:id==='scoreRemodel'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null):id==='strike'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&s.players.some(q=>q.id!==p.id&&q.scores[k]!==null&&!q.augment.scoreSwapped)):id==='closed'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&q.scores[k]!==null&&p.scores[k]!==q.scores[k]):id==='swap'?mine[0]?.id:id==='erase'?zero[0]:open[random(open.length)],other:their[0]?.id,
   indices:indices.slice(0,id==='worldFlip'?1+random(indices.length):2),
   seals:SCORE_CATEGORIES.filter(k=>q.scores[k]===null).slice(0,2).map(category=>({target:q.id,category}))};
 }
@@ -69,11 +69,12 @@ for(let game=0;game<games;game++){
   if(s.augment.drafting){
    for(const id of s.players.map(p=>p.id)){
     let p=s.players.find(p=>p.id===id);
-    for(let offerIndex=0;offerIndex<3;offerIndex++)if(!p.augment.rerolled[offerIndex]&&random(3)===0){command({op:'refresh',offerIndex,id:p.augment.offers[offerIndex]},p,true);refreshes++;p=s.players.find(p=>p.id===id);}
+    for(let offerIndex=0;offerIndex<p.augment.offers.length;offerIndex++)if(!p.augment.rerolled[offerIndex]&&random(3)===0){command({op:'refresh',offerIndex,id:p.augment.offers[offerIndex]},p,true);refreshes++;p=s.players.find(p=>p.id===id);}
     const pick=s.augment.round===7&&p.augment.items.some(i=>i.id==='nudge')&&random(2)===0?'evolution':p.augment.offers[random(p.augment.offers.length)];picks[pick]=(picks[pick]??0)+1;command({op:'pick',id:pick},p,true);
    }
    for(const id of s.players.map(p=>p.id)){
     const p=s.players.find(p=>p.id===id),instant=pendingInstant(p);if(!instant)continue;
+    if(['customDie','estate'].includes(instant)){command({op:'use',id:instant,faces:[1,1,1,6,6,6],categories:SCORE_CATEGORIES.filter(k=>p.scores[k]===null).slice(0,3)},p,true);continue;}
     let resolved=false;
     for(const q of s.players.filter(q=>q.id!==id))for(const other of q.augment.items)for(const mine of p.augment.items){
      if(!resolved)resolved=command({op:'use',id:instant,target:q.id,other:other.id,category:mine.id},s.players.find(p=>p.id===id));
@@ -96,6 +97,7 @@ for(let game=0;game<games;game++){
    if(random(3)===0)break;
   }
   settle();if(s.augment.turn.oldWorld)command({op:'world',value:random(2)},actor(),true);
+  if(s.augment.turn.monster&&!s.augment.turn.monster.split){const n=s.dice[s.augment.turn.monster.index];command({op:'use',id:'monster',value:Math.max(1,n-6)},actor(),true);}
   const before=actor().id,open=SCORE_CATEGORIES.filter(k=>actor().scores[k]===null),offset=random(open.length);
   let recorded=false;for(const category of open.slice(offset).concat(open.slice(0,offset))){
    const previousTotal=playerTotals(actor()).total, previousBonus=actor().augment.bonus, preview=scoreBreakdown(s,actor(),category);

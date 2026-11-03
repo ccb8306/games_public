@@ -172,7 +172,8 @@ export function applyGameAction(state: RoomState, actorId: string, action: Actio
 /** Only server physics may complete a roll; no client command accepts its result. */
 export function completeRoll(state: RoomState, dice: RoomState["dice"], motion: NonNullable<RoomState["motion"]>): RoomState {
   if (state.rollPhase !== "throwing" || state.motion?.id !== motion.id || motion.phase !== "rest") return state;
-  if (dice.length!==state.dice.length || dice.some((n, i) => n === null || !Number.isInteger(n) || n < 1 || n > 6 || (state.held[i] && n !== state.dice[i]))) throw new Error("Invalid physical result");
+  const monster=state.augment?.turn.monster;
+  if (dice.length!==state.dice.length || dice.some((n, i) => n === null || !Number.isInteger(n) || n < 1 || n > (monster&&!monster.split&&monster.index===i?12:6) || (state.held[i] && n !== state.dice[i]))) throw new Error("Invalid physical result");
   const next:RoomState = { ...state, dice: [...dice], motion, rollPhase: "idle", rollCount: state.rollCount + 1, revision: state.revision + 1 };
   return next;
 }

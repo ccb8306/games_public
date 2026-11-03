@@ -66,12 +66,12 @@ export function resolveChoice(
     return;
   }
   if (kind === "thief" || kind === "duel") {
-    const fee=kind==="thief"?5:10;
+    const fee=kind==="thief"?8:15;
     if(c.value===0){
       if(playerTotals(p).total<fee)throw Error(`${fee}점이 있어야 납부할 수 있어요.`);
-      const paid=transfer(s,p,source,fee);
+      const paid=transfer(s,p,source,fee,kind==="thief"?18:15);
       h.result(s,`${p.nickname} → ${source.nickname} ${paid}점 납부 · ${kind==="duel"?"결투 거절":"압류 종료"}`);
-      if(kind==="duel"){source.augment!.progress??={};source.augment!.progress.duelRoll=1;}
+      if(kind==="duel"){source.augment!.bonus+=10;h.result(s,`${source.nickname} · 결투 거절 보너스 +10점 지급 완료`);}
       if(kind==="duel")s.augment!.duels=s.augment!.duels.filter(d=>!(d.a===source.id&&d.b===p.id&&!d.accepted));
       p.augment!.curse=null;
     }else{
@@ -81,7 +81,7 @@ export function resolveChoice(
         d.accepted=true;t.maxRolls=Math.min(2,t.maxRolls);
       }
       curse.resolved=true;
-      h.result(s,`${p.nickname} · ${kind==="duel"?"콜! 결투 수락 — 승리 +35 / 패배 -10":"수금 계약: 이번 기본 족보의 25% 납부 (올림, 최대 15점)"}`);
+      h.result(s,`${p.nickname} · ${kind==="duel"?"콜! 결투 수락 — 승리 +40 / 패배 -10 / 동점 각 +15":"수금 계약: 이번 기본 족보의 40% 납부 (올림, 최대 18점)"}`);
     }
   } else if (kind === "bombParcel") {
     const face = c.value === 1 ? random(6) + 1 : null;

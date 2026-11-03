@@ -16,17 +16,24 @@ export function PlayerAugments({
     const item = items[index];
     const def = item && AUGMENTS.find((d) => d.id === item.id);
     if (!def) return null;
-    const state = goldDisabled(player, item.id)
-      ? "이번 턴 사용 중지"
-      : item.remaining === 0 && def.charges !== 0
-        ? ["artisan", "fakeHouse"].includes(item.id)
-          ? "조작 완료 · 자동 효과 유지"
-          : "사용 완료"
-        : item.usedTurn === turn && def.trigger === "active"
-          ? "이번 턴 사용함"
-          : def.trigger === "passive"
-            ? "자동 발동"
-            : "사용형";
+    const state =
+      item.id === "customDie" && player.augment?.customFaces
+        ? `개조 완료 · ${player.augment.customFaces.join(" / ")}`
+        : item.id === "estate" && player.augment?.estate
+          ? `부지 ${player.augment.estate.completed.length}/3곳 완공 · +${player.augment.estate.paid}/32점`
+          : item.id === "cashNow"
+            ? `증강 보너스 +${item.earned ?? 20}점 지급 완료`
+            : goldDisabled(player, item.id)
+              ? "이번 턴 사용 중지"
+              : item.remaining === 0 && def.charges !== 0
+                ? ["artisan", "fakeHouse", "odd", "six"].includes(item.id)
+                  ? "조작 완료 · 자동 효과 유지"
+                  : "사용 완료"
+                : item.usedTurn === turn && def.trigger === "active"
+                  ? "이번 턴 사용함"
+                  : def.trigger === "passive"
+                    ? "자동 발동"
+                    : "사용형";
     const status = `${state}${item.remaining >= 0 && (def.charges > 0 || item.borrowedAt !== undefined) ? ` · 남은 ${item.remaining}회` : ""}${item.borrowedAt !== undefined ? " · 대여: 다음 자기 턴 끝에 반납" : ""}`;
     return { def, status };
   };
@@ -36,6 +43,7 @@ export function PlayerAugments({
     <>
       <div
         className="player-augments"
+        data-player-id={player.id}
         aria-label={`${player.nickname} 보유 능력`}
       >
         {items.map((item, index) => {
@@ -49,7 +57,7 @@ export function PlayerAugments({
                 data-spent={
                   item.remaining === 0 &&
                   data.def.charges !== 0 &&
-                  !["artisan", "fakeHouse"].includes(item.id)
+                  !["artisan", "fakeHouse", "odd", "six"].includes(item.id)
                 }
                 aria-label={`${data.def.name} 설명`}
                 aria-haspopup="dialog"
@@ -89,6 +97,13 @@ export function PlayerAugments({
               {detail.def.name}
             </h3>
             <p>{detail.def.description}</p>
+            {!!detail.def.details?.length && (
+              <ul>
+                {detail.def.details.map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            )}
             <p className="ability-status">{detail.status}</p>
             <button type="button" onClick={() => dialog.current?.close()}>
               닫기

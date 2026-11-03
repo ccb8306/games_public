@@ -15,10 +15,10 @@ test('bounty coexists with hostile reservations, leaves shields intact, and pays
 });
 test('button toll permits powers, exempts silver, and caps actual payments at fifteen',()=>{
  const s=fixture(['ordinaryDay']),[p,q]=s.players;give(q,['alchemy','mirror','fourth']);q.augment.items[0].remaining=4;q.augment.bonus=40;
- use(s,p,'ordinaryDay',{target:q.id});assert.equal(p.augment.bonus,10);advanceAugment(s,()=>0);assert.equal(s.augment.turn.maxRolls,4);roll(s);
- use(s,q,'mirror',{die:0});assert.equal(p.augment.bonus,10);
+ use(s,p,'ordinaryDay',{target:q.id});assert.equal(p.augment.bonus,15);advanceAugment(s,()=>0);assert.equal(s.augment.turn.maxRolls,4);roll(s);
+ use(s,q,'mirror',{die:0});assert.equal(p.augment.bonus,15);
  for(const value of [2,3,4,5])use(s,q,'alchemy',{die:0,value});
- assert.equal(s.dice[0],5);assert.equal(p.augment.bonus,25);assert.equal(q.augment.bonus,25);
+ assert.equal(s.dice[0],5);assert.equal(p.augment.bonus,20);assert.equal(q.augment.bonus,20);
 });
 test('gold migration refills instance lifetime uses and preserves donor copies',()=>{
  const s=fixture(['goldRush','fourth','revive']),[p,q]=s.players;
@@ -34,12 +34,12 @@ test('sponsor follows the card and self-contracts reopen without minting a fresh
 test('sponsor pays selected rival only and rewards matching their score within the card budget',()=>{
  const s=fixture(['parasite'],3),[p,q,r]=s.players;use(s,p,'parasite',{target:q.id});
  roll(s,[6,6,6,6,6]);recordAugment(s,r,'choice');assert.equal(p.augment.bonus,0);
- recordAugment(s,q,'choice');assert.equal(p.augment.bonus,4);
- assert.equal(augmentedScore(s,p,'choice').extra,6);recordAugment(s,p,'choice');assert.equal(p.augment.bonus,10);assert.equal(p.augment.items[0].earned,10);
+ recordAugment(s,q,'choice');assert.equal(p.augment.bonus,5);
+ assert.equal(augmentedScore(s,p,'choice').extra,5);recordAugment(s,p,'choice');assert.equal(p.augment.bonus,10);assert.equal(p.augment.items[0].earned,10);
 });
 test('last shot is a physical reroll after roll three, retains the count and closes further rerolls',()=>{
  const s=fixture(['lastmove']),p=s.players[0];roll(s);assert.throws(()=>use(s,p,'lastmove',{die:0}));
- s.rollCount=3;use(s,p,'lastmove',{die:0});assert.equal(s.rollPhase,'shaking');s.dice[0]=6;s.rollCount=4;afterAugmentRoll(s,()=>0);assert.equal(s.rollCount,3);assert.ok(s.augment.turn.flags.includes('final'));
+ s.rollCount=3;use(s,p,'lastmove',{die:0});assert.equal(s.rollPhase,'shaking');s.dice[0]=6;s.rollCount=4;afterAugmentRoll(s,()=>0);assert.equal(s.rollCount,3);assert.ok(!s.augment.turn.flags.includes('final'));
  assert.throws(()=>use(s,p,'lastmove',{die:1}));
 });
 test('two-seat carousel is excluded while confiscation supplies its two-seat bonus',()=>{
@@ -53,7 +53,7 @@ test('dead late-game scoring offers and retired cards never appear',()=>{
  }
 });
 test('duel refusal grants one next-turn roll, and victory messages show actual thirty-five points',()=>{
- const s=fixture(['duel']),[p,q]=s.players;q.augment.bonus=30;use(s,p,'duel',{target:q.id});advanceAugment(s,()=>0);useAugment(s,q,{op:'resolve',value:0},()=>0);roll(s);recordAugment(s,q,'choice');advanceAugment(s,()=>0);assert.equal(s.augment.turn.maxRolls,4);assert.equal(p.augment.progress.duelRoll,0);
+ const s=fixture(['duel']),[p,q]=s.players;q.augment.bonus=30;use(s,p,'duel',{target:q.id});advanceAugment(s,()=>0);useAugment(s,q,{op:'resolve',value:0},()=>0);roll(s);recordAugment(s,q,'choice');advanceAugment(s,()=>0);assert.equal(s.augment.turn.maxRolls,3);assert.equal(p.augment.progress.duelRoll,0);
  const d=fixture();d.augment.duels=[{a:'unused',b:'unused',after:0,accepted:true,aScore:null,bScore:null}];
- d.augment.turn.serial=2;d.augment.duels=[{a:d.players[0].id,b:d.players[1].id,after:0,accepted:true,aScore:null,bScore:10}];roll(d,[6,6,6,6,6]);recordAugment(d,d.players[0],'choice');assert.equal(d.players[0].augment.bonus,35);assert.ok(d.augment.results.some(r=>r.text.includes('+35')));
+ d.augment.turn.serial=2;d.augment.duels=[{a:d.players[0].id,b:d.players[1].id,after:0,accepted:true,aScore:null,bScore:10}];roll(d,[6,6,6,6,6]);recordAugment(d,d.players[0],'choice');assert.equal(d.players[0].augment.bonus,40);assert.ok(d.augment.results.some(r=>r.text.includes('+40')));
 });

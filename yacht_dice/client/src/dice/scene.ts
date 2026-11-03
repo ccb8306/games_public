@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
 import type { RoomState } from "@yacht/shared";
 import type { RollPhase } from "../feedback/qualifications";
-import { FACE_ORDER, type Pose } from "@yacht/shared";
+import { FACE_ORDER, D12, type Pose } from "@yacht/shared";
 import { MotionStream, positionBetween } from "./motion";
 
 export type DiceView = {
@@ -11,6 +11,9 @@ export type DiceView = {
   held: RoomState["held"];
   phase: RollPhase;
   disabled: boolean;
+  faces?: number[][];
+  monster?: number;
+  childIndex?: number;
 };
 
 export function createDiceScene(
@@ -196,6 +199,75 @@ export function createDiceScene(
   const makeDie = () =>
     mesh(new RoundedBoxGeometry(0.9, 0.9, 0.9, 3, 0.08), diceMaterials);
   const diceMeshes = Array.from({ length: 5 }, makeDie);
+  const childMaterials = diceMaterials.map((m, i) => {
+    const copy = m.clone();
+    copy.color.set(i % 2 ? "#b4e8ff" : "#ffc7df");
+    copy.emissive.set("#271327");
+    copy.emissiveIntensity = 0.15;
+    materials.push(copy);
+    return copy;
+  });
+  const monsterGeometry = new THREE.BufferGeometry(),
+    positions: number[] = [],
+    uvs: number[] = [];
+  const monsterMaterials = D12.faces.map((face, index) => {
+    const center = new THREE.Vector3();
+    for (const i of face.indices)
+      center.add(new THREE.Vector3(...D12.vertices[i]!));
+    center.divideScalar(5);
+    const normal = new THREE.Vector3(...face.normal),
+      u = new THREE.Vector3(...D12.vertices[face.indices[0]!]!)
+        .sub(center)
+        .normalize(),
+      v = new THREE.Vector3().crossVectors(normal, u);
+    const start = positions.length / 3;
+    for (let j = 1; j < 4; j++)
+      for (const id of [
+        face.indices[0]!,
+        face.indices[j]!,
+        face.indices[j + 1]!,
+      ]) {
+        const point = new THREE.Vector3(...D12.vertices[id]!);
+        positions.push(...point.toArray());
+        point.sub(center);
+        uvs.push(0.5 + point.dot(u), 0.5 + point.dot(v));
+      }
+    monsterGeometry.addGroup(start, 9, index);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 128;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#52215d";
+    ctx.fillRect(0, 0, 128, 128);
+    ctx.strokeStyle = "#ffcc6b";
+    ctx.lineWidth = 5;
+    ctx.strokeRect(3, 3, 122, 122);
+    ctx.fillStyle = "#fff2c8";
+    ctx.font = "bold 65px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(
+      `${index + 1}${[6, 9].includes(index + 1) ? "." : ""}`,
+      64,
+      64,
+    );
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    textures.push(texture);
+    const mat = new THREE.MeshStandardMaterial({
+      map: texture,
+      roughness: 0.3,
+      metalness: 0.15,
+    });
+    materials.push(mat);
+    return mat;
+  });
+  monsterGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3),
+  );
+  monsterGeometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+  monsterGeometry.computeVertexNormals();
+  geometries.push(monsterGeometry);
   let view: DiceView = {
     dice: [null, null, null, null, null],
     held: [false, false, false, false, false],
@@ -362,6 +434,20 @@ export function createDiceScene(
       while (diceMeshes.length < next.dice.length) diceMeshes.push(makeDie());
       while (diceMeshes.length > next.dice.length)
         table.remove(diceMeshes.pop()!);
+      diceMeshes.forEach((m, i) => {
+        m.userData.normalGeometry ??= m.geometry;
+        m.geometry =
+          i === next.monster ? monsterGeometry : m.userData.normalGeometry;
+        const base = i === next.childIndex ? childMaterials : diceMaterials;
+        m.material =
+          i === next.monster
+            ? monsterMaterials
+            : next.faces?.[i]
+              ? FACE_ORDER.map(
+                  (f) => base[FACE_ORDER.indexOf(next.faces![i]![f - 1]!)]!,
+                )
+              : base;
+      });
       request();
     },
     dispose() {
