@@ -42,6 +42,38 @@ export function FlashInputs({
       p.id !== player.id &&
       (id === "closed" || Object.values(p.scores).some((n) => n === null)),
   );
+  if (id === "strike")
+    return (
+      <div className="augment-direct">
+        <p>
+          기록된 하단 점수를 회전합니다. 내 점수도 넘어가요! 방향은 사용 후
+          공개됩니다.
+        </p>
+        <div className="augment-choice">
+          {SCORE_CATEGORIES.slice(6).map((category) => (
+            <button
+              key={category}
+              disabled={!legal({ category })}
+              onClick={() => onUse({ category })}
+            >
+              {SCORE_LABELS[category]}
+              <small>
+                {room.players
+                  .filter(
+                    (q) =>
+                      q &&
+                      !q.forfeited &&
+                      q.scores[category] !== null &&
+                      !q.augment?.scoreSwapped,
+                  )
+                  .map((q) => `${q!.nickname} ${q!.scores[category]}점`)
+                  .join(" / ")}
+              </small>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
   if (
     ["handsUp", "strike", "squid", "dinner", "confiscate", "goldRush"].includes(
       id,

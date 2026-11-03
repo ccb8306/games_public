@@ -10,12 +10,12 @@ test('offer refresh and every single-die reroll synchronize, survive reconnect a
  a.send('createRoom',{nickname:'A',mode:'augment'});await a.until(()=>a.state);b.send('joinRoom',{nickname:'B',code:a.state.code});await b.until(()=>b.state);await a.until(()=>a.state.players.filter(Boolean).length===2);
  await a.command('setReady',{ready:true});await b.until(()=>b.state.revision===a.state.revision);await b.command('setReady',{ready:true});await a.until(()=>a.state.augment?.drafting);
  const before=structuredClone(a.state.players[1].augment),old=[...a.state.players[0].augment.offers],flash=a.state.players[0].augment.flashOffer;
- await a.command('augment',{command:{op:'refresh'}});await b.until(()=>b.state.revision===a.state.revision);
- assert.deepEqual(b.state.players[1].augment,before);assert.equal(b.state.players[0].augment.refreshed,true);assert.equal(b.state.players[0].augment.flashOffer,flash);assert.ok(b.state.players[0].augment.offers.every(id=>!old.includes(id)));
- const session=a.session;a.ws.close();await b.until(()=>b.state.players.some(p=>!p.connected));a=await connect(url);a.send('resumeRoom',{code:session.code,token:session.token});await a.until(()=>a.state);assert.equal(a.state.players[0].augment.refreshed,true);
+ await a.command('augment',{command:{op:'refresh',offerIndex:0,id:old[0]}});await b.until(()=>b.state.revision===a.state.revision);
+ assert.deepEqual(b.state.players[1].augment,before);assert.equal(b.state.players[0].augment.rerolled[0],true);assert.equal(b.state.players[0].augment.flashOffer,flash);assert.ok(!old.includes(b.state.players[0].augment.offers[0]));assert.deepEqual(b.state.players[0].augment.offers.slice(1),old.slice(1));
+ const session=a.session;a.ws.close();await b.until(()=>b.state.players.some(p=>!p.connected));a=await connect(url);a.send('resumeRoom',{code:session.code,token:session.token});await a.until(()=>a.state);assert.equal(a.state.players[0].augment.rerolled[0],true);
  await a.command('augment',{command:{op:'pick',id:a.state.players[0].augment.offers[0]}});await b.until(()=>b.state.revision===a.state.revision);await b.command('augment',{command:{op:'pick',id:b.state.players[1].augment.offers[0]}});await a.until(()=>!a.state.augment.drafting);
  let actor=a.state.currentPlayerId===a.session.playerId?a:b;const peer=actor===a?b:a,room=[...app.rooms.rooms.values()][0],baseline=structuredClone(room.state);
- for(const count of [4,10])for(const id of ['choiceRoll','even','chaos','exchange']){
+ for(const count of [4,10])for(const id of ['collector','choiceRoll','even','chaos','exchange']){
   room.state=structuredClone(baseline);room.state.revision+=100;room.state.rollCount=3;room.state.dice=Array.from({length:count},(_,i)=>i%6+1);room.state.held=Array.from({length:count},(_,i)=>i%2===0);room.state.motion=null;
   const index=count-1;room.state.dice[index]=1;const faces=[...room.state.dice],held=[...room.state.held];
   room.state.players.find(p=>p.id===actor.session.playerId).augment.items=[{id,remaining:2,usedTurn:-1,usedRound:-1}];room.state.augment.event=['chaos','exchange'].includes(id)?id:null;

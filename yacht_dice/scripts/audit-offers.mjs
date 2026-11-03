@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {randomInt,randomUUID} from 'node:crypto';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {AUGMENTS,emptyScorecard,initAugment,useAugment} from '../shared/dist/index.js';
+import {AUGMENTS,emptyScorecard,initAugment,advanceAugment} from '../shared/dist/index.js';
 const samples=Number(process.argv[2]??10000),report=[];
 for(const [round,rarity] of [[1,'silver'],[4,'gold'],[7,'gold'],[10,'prism']]){
  const seats=Array.from({length:4},()=>({flash:0,positions:Array.from({length:3},()=>({}))}));let sameOrdered=0,sameSet=0,sharedCards=0;
@@ -9,10 +9,10 @@ for(const [round,rarity] of [[1,'silver'],[4,'gold'],[7,'gold'],[10,'prism']]){
   const s={phase:'playing',mode:'augment',players:Array.from({length:4},(_,slot)=>({id:String(slot),slot,nickname:String(slot),scores:emptyScorecard(),connected:true,forfeited:false})),currentPlayerId:'0',dice:[],held:[],rollPhase:'idle',rollCount:0};
   initAugment(s,randomInt);
   if(round!==1){
-   s.augment.round=round;
-   // All seats have identical eligibility; refresh reuses their independently drawn 10% flash entitlement.
+   s.augment.round=round-1;
+   // Advance into a new draft with identical eligibility in every seat.
    for(const p of s.players)p.augment.items=[{id:'fourth',remaining:0,usedTurn:-1,usedRound:-1}];
-   for(const p of s.players)useAugment(s,p,{op:'refresh'},randomInt);
+   s.augment.done=s.players.map(p=>p.id);advanceAugment(s,randomInt);
   }
   for(let slot=0;slot<4;slot++){
    const p=s.players[slot],ids=p.augment.offers;assert.equal(new Set(ids).size,3);
@@ -46,4 +46,4 @@ for(const [round,rarity] of [[1,'silver'],[4,'gold'],[7,'gold'],[10,'prism']]){
  console.log(JSON.stringify({round,samples,seatFlashRates:report.at(-1).seatFlashRates,sameOrdered,sameSet}));
 }
 await mkdir('artifacts/augments',{recursive:true});
-await writeFile('artifacts/augments/offer-randomness.json',JSON.stringify({randomSource:'node:crypto.randomInt (same as production server)',method:'Four equal-eligibility seats; 10,000 drafts per round. Later-tier refresh keeps independently drawn flash entitlement. Statistical screening, not proof of all possible random sequences.',report},null,2));
+await writeFile('artifacts/augments/offer-randomness.json',JSON.stringify({randomSource:'node:crypto.randomInt (same as production server)',method:'Four equal-eligibility seats; 10,000 drafts per round. Each later tier starts a fresh independently drawn draft. Statistical screening, not proof of all possible random sequences.',report},null,2));

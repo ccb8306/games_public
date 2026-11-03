@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {createApp} from '../server/dist/app.js';
-import {AUGMENTS,advanceAugment,afterAugmentRoll} from '../shared/dist/index.js';
+import {AUGMENTS,advanceAugment,afterAugmentRoll,recordAugment,roomStateSchema} from '../shared/dist/index.js';
 const {chromium}=await import(process.argv[2]??'playwright');
 const app=createApp();await new Promise(r=>app.server.listen(0,'127.0.0.1',r));let browser;
 try{
@@ -14,9 +14,13 @@ try{
  for(const p of pages){await p.getByRole('button',{name:'준비 완료',exact:true}).click();await p.waitForTimeout(100);}
  await pages[0].getByRole('dialog',{name:'증강 선택'}).waitFor();await pages[0].screenshot({path:'artifacts/augments/draft.png',fullPage:true});
  const otherOffers=room.state.players.slice(1).map(p=>[...p.augment.offers]);
- await pages[0].getByRole('button',{name:/\uC120\uD0DD\uC9C0 \uC0C8\uB85C\uACE0\uCE68/}).click();await pages[0].waitForTimeout(200);
- assert.equal(room.state.players[0].augment.refreshed,true);assert.deepEqual(room.state.players.slice(1).map(p=>p.augment.offers),otherOffers);
- assert.equal(await pages[0].getByRole('button',{name:/\uC120\uD0DD\uC9C0 \uC0C8\uB85C\uACE0\uCE68/}).isDisabled(),true);
+ for(let offerIndex=0;offerIndex<3;offerIndex++){
+  const old=[...room.state.players[0].augment.offers];await pages[0].locator('.augment-reroll').nth(offerIndex).click();await pages[0].waitForTimeout(200);
+  assert.equal(room.state.players[0].augment.rerolled[offerIndex],true);assert.notEqual(room.state.players[0].augment.offers[offerIndex],old[offerIndex]);
+  for(let i=0;i<3;i++)if(i!==offerIndex)assert.equal(room.state.players[0].augment.offers[i],old[i]);
+  assert.deepEqual(room.state.players.slice(1).map(p=>p.augment.offers),otherOffers);assert.equal(await pages[0].locator('.augment-reroll').nth(offerIndex).isDisabled(),true);
+ }
+ for(const [i,p] of pages.entries()){await p.screenshot({path:`artifacts/augments/draft-reroll-${i}.png`});assert.ok(await p.locator('.augment-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1));}
  for(const p of pages){await p.locator('.augment-offers .augment-card').first().click();await p.waitForTimeout(120);}
  for(const p of pages)await p.locator('.augment-overlay').waitFor({state:'hidden'});
  const slot=room.state.players.find(p=>p.id===room.state.currentPlayerId).slot,actor=pages[slot];
@@ -62,6 +66,10 @@ try{
  const expectedCatalog=AUGMENTS.toSorted((a,b)=>['silver','gold','prism'].indexOf(a.rarity)-['silver','gold','prism'].indexOf(b.rarity)||a.name.localeCompare(b.name,'ko'));
  const checkCatalog=async cards=>assert.deepEqual(await actor.locator('.augment-catalog > button strong').allTextContents(),cards.map(d=>(d.flash?'\u2726 \uBC88\uB729\uC784 \u00b7 ':'')+d.name));
  await checkCatalog(expectedCatalog);
+ await actor.locator('.augment-catalog-tools input').fill(AUGMENTS.find(d=>d.id==='goldRush').name);assert.equal(await actor.locator('.augment-catalog > button').count(),1);
+ await actor.locator('.augment-catalog-tools select').selectOption('silver');assert.equal(await actor.locator('.augment-catalog > button').count(),0);
+ await actor.locator('.augment-catalog-tools input').fill('');await actor.locator('.augment-catalog-tools select').selectOption('all');await checkCatalog(expectedCatalog);
+
  assert.ok(await actor.locator('.augment-dialog').evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.left+r.width/2,r.top+100));}),'event banner must stay behind catalog');
 
  for(const width of [1366,780,390]){
@@ -77,20 +85,83 @@ try{
 
  await actor.locator('.augment-close').click();await actor.setViewportSize({width:1366,height:768});
  const baseline=structuredClone(room.state);
+ room.state=structuredClone(baseline);room.state.revision+=40;
+ const scoringPlayer=room.state.players[slot];scoringPlayer.augment.items=[{id:'rest',remaining:0,usedTurn:-1,usedRound:-1}];scoringPlayer.augment.curse=null;scoringPlayer.augment.bonus=0;
+ room.state.augment.event=null;Object.assign(room.state.augment.turn,{flags:[],locked:null,fixed:[],sealed:[],erase:null,parallel:null});
+ room.state.dice=[6,6,6,6,6];room.state.held=Array(5).fill(false);room.state.motion=null;room.state.rollCount=1;room.state.rollPhase='idle';app.rooms.broadcast(room);await actor.waitForTimeout(250);
+ for(const width of [1366,390]){
+  await actor.setViewportSize({width,height:768});const cell=actor.locator('[data-category="choice"] button');await cell.click();
+  assert.equal(await cell.innerText(),'30');assert.ok((await actor.locator('.score-breakdown').innerText()).includes('+6'));assert.ok((await actor.locator('.score-breakdown').innerText()).includes('+36'));
+  assert.ok((await actor.locator('.score-confirm button').innerText()).includes('30'));
+  assert.ok(await actor.locator('.score-breakdown').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
+  assert.ok(await actor.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+  if(width===1366)assert.ok(await actor.locator('.score-panel').evaluate(el=>el.scrollHeight<=el.clientHeight+1));
+  await actor.screenshot({path:`artifacts/augments/score-breakdown-${width}.png`,fullPage:true});
+ }
+ await actor.setViewportSize({width:1366,height:768});
+ for(const id of ['thief','duel','loan']){
+  room.state=structuredClone(baseline);room.state.revision+=80;
+  for(const q of room.state.players){q.augment.curse=null;q.augment.items=[];q.augment.bonus=30;}
+  room.state.players[slot].augment.items=[{id,remaining:1,usedTurn:-1,usedRound:-1}];
+  room.state.augment.duels=[];room.state.augment.jackpot=undefined;room.state.augment.event=null;
+  Object.assign(room.state.augment.turn,{flags:[],locked:null,fixed:[],sealed:[],pending:undefined,hostage:undefined,saveIndex:undefined});
+  room.state.rollCount=0;room.state.dice=Array(5).fill(null);room.state.held=Array(5).fill(false);room.state.motion=null;room.state.rollPhase='idle';app.rooms.broadcast(room);await actor.waitForTimeout(250);
+  await actor.locator('.augment-hand .augment-card').click();const dialog=actor.locator('.augment-dialog');
+  if(id==='loan'){
+   await dialog.getByRole('button',{name:'능력 사용',exact:true}).click();await actor.waitForTimeout(250);
+   room.state.rollCount=2;room.state.dice=Array(5).fill(6);room.state.revision++;app.rooms.broadcast(room);await actor.waitForTimeout(250);
+   await actor.getByRole('button',{name:'두 배 걸고 한 번 더!'}).click();await actor.locator('.throw').click();
+   for(let wait=0;room.state.rollPhase!=='idle'&&wait<300;wait++)await actor.waitForTimeout(100);
+   assert.ok(room.state.augment.turn.flags.includes('loanDouble'));await actor.screenshot({path:'artifacts/augments/chaos-double.png'});
+  }else{
+   await dialog.locator('.augment-choice button:enabled').first().click();await actor.waitForTimeout(200);
+   const target=room.state.players.find(q=>q.augment.curse?.id===id);
+   for(let i=0;i<4&&room.state.currentPlayerId!==target.id;i++)advanceAugment(room.state,()=>0);
+   room.state.revision++;app.rooms.broadcast(room);const page=pages[target.slot];await page.reload();
+   const pending=page.getByRole('dialog',{name:'능력 결과 선택'});await pending.waitFor();await page.screenshot({path:`artifacts/augments/chaos-${id}.png`});
+   await pending.locator('.primary').click();await page.waitForTimeout(200);assert.equal(room.state.augment.turn.pending,undefined);
+  }
+ }
+ for(const id of ['artisan','fakeHouse','chance','collector']){
+  room.state=structuredClone(baseline);room.state.revision+=50;
+  const p=room.state.players[slot];p.augment.curse=null;p.augment.items=[{id,remaining:AUGMENTS.find(d=>d.id===id).charges,usedTurn:-1,usedRound:-1}];
+  Object.assign(room.state.augment.turn,{flags:[],locked:null,fixed:[],sealed:[],pending:undefined,hostage:undefined,saveIndex:undefined});
+  room.state.dice=[1,2,2,4,5];room.state.held=Array(5).fill(false);room.state.motion=null;room.state.rollCount=1;room.state.rollPhase='idle';
+  app.rooms.broadcast(room);await actor.waitForTimeout(250);
+  await actor.locator('.augment-hand .augment-card').click();const dialog=actor.locator('.augment-dialog');
+  await actor.screenshot({path:`artifacts/augments/rework-${id}.png`,fullPage:true});
+  if(id==='artisan'){
+   await dialog.locator('.augment-choice').first().locator('button').nth(1).click();
+   await dialog.locator('.augment-choice').nth(1).locator('button').first().click();
+  }else if(id==='chance')await dialog.locator('.primary').click();
+  else await dialog.locator('.augment-choice button:enabled').first().click();
+  await actor.waitForTimeout(250);
+  assert.equal(room.state.players[slot].augment.items[0].remaining,AUGMENTS.find(d=>d.id===id).charges-1,id);
+  if(id==='collector'){
+   await actor.locator('.throw').click();
+   for(let wait=0;room.state.rollPhase!=='idle'&&wait<300;wait++)await actor.waitForTimeout(100);
+   assert.equal(room.state.rollPhase,'idle');assert.equal(room.state.rollCount,1);assert.deepEqual(room.state.dice.filter((_,i)=>i!==1),[1,2,4,5]);
+  }
+  if(id==='artisan')assert.deepEqual(room.state.dice,[1,3,2,4,5]);
+  if(id==='fakeHouse')assert.deepEqual(room.state.dice,[2,2,2,3,5]);
+  if(id==='chance')assert.ok(room.state.augment.turn.flags.includes('final'));
+ }
  for(const id of ['confiscate','parkingTicket','butterFingers','ordinaryDay','taxSix','broken','construction','closed','practice','receipt','dropIt','goldRush','handsUp','strike','squid']){
   room.state=structuredClone(baseline);room.state.revision+=100;
   for(const q of room.state.players){q.augment.curse=null;q.augment.items=[{id:'clone',remaining:4,usedTurn:-1,usedRound:-1}];}
   const p=room.state.players[slot];p.augment.items=[{id,remaining:AUGMENTS.find(d=>d.id===id).charges,usedTurn:-1,usedRound:-1}];
-  if(id==='closed'){for(const q of room.state.players)q.scores.yacht=q.id===p.id?0:50;}
+  if(['closed','strike'].includes(id)){for(const q of room.state.players)q.scores.yacht=q.id===p.id?0:50;}
+  if(id==='squid')for(const q of room.state.players)q.augment.bonus=30;
   if(id==='goldRush')p.augment.items.push({id:'alchemy',remaining:2,usedTurn:-1,usedRound:-1});
   app.rooms.broadcast(room);await actor.waitForTimeout(200);
   await actor.locator('.augment-hand .augment-card').first().click();const dialog=actor.getByRole('dialog');
   assert.equal(await dialog.locator('select').count(),0);
   if(id==='closed'){
    await dialog.locator('section').first().getByRole('button').first().click();
-  }else if(['handsUp','strike','squid','confiscate','goldRush'].includes(id))await dialog.getByRole('button').last().click();
+  }else if(id==='strike')await dialog.locator('.augment-choice button:enabled').first().click();
+  else if(['handsUp','squid','confiscate','goldRush'].includes(id))await dialog.getByRole('button').last().click();
   else await dialog.locator('section').first().getByRole('button').first().click();
-  await actor.waitForTimeout(250);if(id==='closed')assert.equal(room.state.players[slot].scores.yacht,50);else if(id==='goldRush')assert.ok(room.state.players[slot].augment.items.some(i=>i.id==='clone'));else assert.ok(room.state.players.some(q=>q.augment.curse?.id===id),id);
+  await actor.waitForTimeout(250);if(id==='closed')assert.equal(room.state.players[slot].scores.yacht,50);else if(id==='strike')assert.ok(room.state.players.some(q=>q.augment.scoreSwapped));else if(id==='goldRush')assert.ok(room.state.players[slot].augment.items.some(i=>i.id==='clone'));else assert.ok(room.state.players.some(q=>q.augment.curse?.id===id),id);
   await actor.screenshot({path:`artifacts/augments/flash-${id}.png`,fullPage:true});
   assert.ok(await actor.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  }
@@ -159,5 +230,16 @@ try{
   for(const page of pages){assert.equal(await page.locator(sealed?'.sealed-die':'.bomb-die').count(),sealed?2:1);if(sealed)assert.equal(await page.locator('.sealed-die:disabled').count(),2);}
   await actor.screenshot({path:`artifacts/augments/${sealed?'sealed':'bomb'}-dice.png`,fullPage:true});
  }
- assert.deepEqual(errors,[]);await writeFile('artifacts/augments/browser.json',JSON.stringify({clients:4,modeSelection:true,draft:true,sixDice:true,clone:true,allDiceScoring:true,reconnect:true,catalog:74,bombMarkers:true,sealedMarkers:true,errors},null,2));console.log('Augment browser checks passed');
+ room.state=structuredClone(baseline);room.state.revision+=5000;
+ const paid=room.state.players[slot];paid.augment.items=[];paid.augment.curse=null;paid.augment.bonus=0;
+ room.state.dice=[1,2,3,4,5];room.state.held=Array(5).fill(false);room.state.motion=null;room.state.rollCount=1;room.state.rollPhase='idle';
+ Object.assign(room.state.augment.turn,{erase:'bonus',parallel:null,flags:[],pending:undefined,reroll:null,oldWorld:null,chooseOld:null,fork:undefined});
+ recordAugment(room.state,paid,'choice');const checked=roomStateSchema.safeParse(room.state);assert.ok(checked.success,JSON.stringify(checked.error));app.rooms.broadcast(room);
+ await actor.waitForFunction(()=>document.querySelector('.augment-result-burst')?.textContent.includes('+10'));
+ await actor.locator('.augment-receipts summary').click();
+ assert.ok((await actor.locator('.augment-receipts').innerText()).includes('+10'));
+ await actor.screenshot({path:'artifacts/augments/payout-receipt.png',fullPage:true});
+ await actor.reload();await actor.locator('.augment-receipts').waitFor();assert.equal(await actor.locator('.augment-result-burst').count(),0);
+ await actor.locator('.augment-receipts summary').click();assert.ok((await actor.locator('.augment-receipts').innerText()).includes('+10'));
+ assert.deepEqual(errors,[]);await writeFile('artifacts/augments/browser.json',JSON.stringify({clients:4,modeSelection:true,draft:true,sixDice:true,clone:true,allDiceScoring:true,reconnect:true,catalog:74,bombMarkers:true,sealedMarkers:true,payoutReceipt:true,errors},null,2));console.log('Augment browser checks passed');
 }finally{await browser?.close();await app.close();}

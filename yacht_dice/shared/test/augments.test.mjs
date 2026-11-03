@@ -9,6 +9,102 @@ export function fixture(ids=[],count=2){
 export function give(p,ids){p.augment.items=ids.map(id=>({id,remaining:AUGMENTS.find(d=>d.id===id).charges,usedTurn:-1,usedRound:-1}));}
 const use=(s,id,extra={})=>useAugment(s,s.players[0],{op:'use',id,...extra},()=>0);
 const rolled=(s,dice=[6,6,6,2,4],rolls=1)=>{s.dice=dice;s.held=dice.map(()=>false);s.rollCount=rolls;return s;};
+test('double scoring caps bonus at forty and preserves the bonus category',()=>{
+ const s=rolled(fixture(['parallel']),[6,6,6,6,6]);use(s,'parallel',{category:'yacht'});
+ assert.equal(scorePreview(s,s.players[0],'choice'),70);recordAugment(s,s.players[0],'choice');
+ assert.equal(s.players[0].augment.bonus,40);assert.equal(s.players[0].scores.yacht,null);
+});
+test('living menu changes after ordinary rolls but not free rerolls',()=>{
+ const s=fixture(['construction']);use(s,'construction',{target:s.players[1].id});advanceAugment(s,()=>0);rolled(s);afterAugmentRoll(s,()=>0);
+ const first=[...s.players[1].augment.curse.categories];s.rollCount=2;afterAugmentRoll(s,n=>n-1);
+ assert.notDeepEqual(s.players[1].augment.curse.categories,first);
+ const menu=[...s.players[1].augment.curse.categories];s.augment.turn.reroll={id:'even',index:0,old:1,held:Array(5).fill(false)};s.rollCount=3;afterAugmentRoll(s,()=>0);
+ assert.deepEqual(s.players[1].augment.curse.categories,menu);
+});
+
+test('payout receipts distinguish reservation from payment and include simultaneous bonus reasons',()=>{
+ const s=rolled(fixture(['erase','cleaner']),[1,1,2,3,4]);use(s,'erase');
+ assert.equal(s.players[0].augment.bonus,0);
+ recordAugment(s,s.players[0],'choice');
+ assert.equal(s.players[0].augment.bonus,16);
+ const text=s.augment.results.at(-1).text;
+ assert.match(text,/지워진 0.*\+10점 지급 완료/);assert.match(text,/바닥 청소부 \+6/);assert.match(text,/현재 총점 27점/);
+ const x=fixture();x.augment.drafting=true;x.players[0].augment.offers=['doppel'];
+ useAugment(x,x.players[0],{op:'pick',id:'doppel'},()=>0);
+ assert.equal(x.players[0].augment.bonus,10);assert.ok(x.augment.results.some(r=>r.text.includes('대체 보너스 +10점 지급 완료')));
+});
+test('prism ransom has a 30-point exception and seals exactly three dice with no duplicate resolve',()=>{
+ const s=fixture(['hostage']);s.players[1].augment.bonus=29;
+ use(s,'hostage',{target:s.players[1].id});advanceAugment(s,()=>0);rolled(s);afterAugmentRoll(s,()=>0);
+ assert.throws(()=>useAugment(s,s.players[1],{op:'resolve',value:0},()=>0));
+ assert.throws(()=>useAugment(s,s.players[1],{op:'resolve',value:1,indices:[0,1]},()=>0));
+ useAugment(s,s.players[1],{op:'resolve',value:1,indices:[0,1,2]},()=>0);
+ assert.deepEqual(s.dice.slice(0,3),[1,1,1]);assert.deepEqual(s.augment.turn.sealed,[0,1,2]);
+ assert.throws(()=>useAugment(s,s.players[1],{op:'resolve',value:0},()=>0));
+});
+test('silver dinner pays per one with a cap and reports the actual result',()=>{
+ for(const count of [0,1,2,3,5]){
+  const s=fixture(['dinner']);use(s,'dinner');advanceAugment(s,()=>0);
+  rolled(s,Array.from({length:5},(_,i)=>i<count?1:2));
+  const expected=count?Math.min(6,count*2):-4;
+  assert.equal(augmentedScore(s,s.players[1],'choice').extra,expected);
+  recordAugment(s,s.players[1],'choice');assert.equal(s.players[1].augment.bonus,expected);
+  assert.ok(s.augment.results.at(-1).text.includes('오늘 회식은 1차만'));
+ }
+});
+
+test('smuggler edits only duplicates to absent faces, once per turn, and keeps passive after depletion',()=>{
+ const s=rolled(fixture(['artisan']),[1,2,2,4,5]);
+ assert.throws(()=>use(s,'artisan',{die:0,value:3}));
+ assert.throws(()=>use(s,'artisan',{die:1,value:4}));
+ use(s,'artisan',{die:1,value:3});assert.deepEqual(s.dice,[1,3,2,4,5]);
+ assert.equal(s.players[0].augment.items[0].remaining,2);
+ assert.throws(()=>use(s,'artisan',{die:2,value:6}));
+ s.players[0].augment.items[0].remaining=0;
+ s.players[0].scores.largeStraight=30;s.players[0].scores.smallStraight=15;
+ assert.equal(augmentedScore(s,s.players[0],'ones').extra,5);
+});
+test('roommates preserve sum, reject invalid pairs atomically, and retain full-house rider',()=>{
+ for(const [dice,expected] of [[[1,5,2,5,6],[3,3,2,5,6]],[[2,5,2,5,6],[3,4,2,5,6]]]){
+  const s=rolled(fixture(['fakeHouse']),dice);use(s,'fakeHouse',{indices:[1,0]});assert.deepEqual(s.dice,expected);
+  assert.throws(()=>use(s,'fakeHouse',{indices:[2,4]}));
+ }
+ const s=rolled(fixture(['fakeHouse']),[1,5,2,5,6]);s.augment.turn.sealed=[1];
+ const original=structuredClone(s);
+ assert.equal(applyGameAction(s,s.players[0].id,{type:'augment',command:{op:'use',id:'fakeHouse',indices:[0,1]}},()=>0).ok,false);
+ assert.deepEqual(s,original);
+ for(const indices of [[0,0],[-1,2],[0,9],[2,2]])assert.throws(()=>use(s,'fakeHouse',{indices}));
+ s.dice=[6,6,6,6,1];s.players[0].augment.items[0].remaining=0;
+ assert.equal(augmentedScore(s,s.players[0],'fullHouse').score,25);
+});
+test('cashout fills any open lower slot with capped sum, without multipliers or enhancements',()=>{
+ for(const count of [4,5,6,10]){
+  const s=fixture(['chance','hunter','devil']);use(s,'devil');rolled(s,Array(count).fill(6));use(s,'chance');
+  for(const k of SCORE_CATEGORIES.slice(6)){
+   const score=augmentedScore(s,s.players[0],k);assert.equal(score.score,Math.min(40,count*6+10));assert.equal(score.multiplier,1);assert.equal(score.enhance,0);
+  }
+  assert.equal(applyGameAction(s,s.players[0].id,{type:'startShake'},()=>0).ok,false);
+  assert.equal(augmentedScore(s,s.players[0],'sixes').score,count*6*(count*6>=25?2:0));
+  assert.throws(()=>use(s,'chance'));
+ }
+ for(const order of [['chance','substitute'],['substitute','chance']]){
+  const s=rolled(fixture(order));use(s,order[0]);assert.throws(()=>use(s,order[1]));
+ }
+ const s=rolled(fixture(['chance']));for(const k of SCORE_CATEGORIES.slice(6))s.players[0].scores[k]=0;
+ assert.throws(()=>use(s,'chance'));assert.equal(s.players[0].augment.items[0].remaining,1);
+});
+test('collector physically rerolls a duplicate, restores holds/count, and rejects locked or final dice',()=>{
+ const s=rolled(fixture(['collector']),[2,2,3,4,5],2);s.held=[true,false,true,false,false];
+ assert.throws(()=>use(s,'collector',{die:2}));use(s,'collector',{die:0});
+ assert.equal(s.rollPhase,'shaking');assert.deepEqual(s.held,[false,true,true,true,true]);
+ s.dice[0]=1;s.rollCount=3;s.rollPhase='idle';afterAugmentRoll(s,()=>0);
+ assert.equal(s.rollCount,2);assert.equal(s.dice[0],1);assert.deepEqual(s.held,[true,false,true,false,false]);assert.equal(s.augment.turn.chooseOld,null);
+ assert.equal(s.players[0].augment.items[0].remaining,1);assert.throws(()=>use(s,'collector',{die:0}));
+ for(const mode of ['locked','final','wild']){
+  const q=rolled(fixture(['collector']),[2,2,3,4,5]);if(mode==='locked')q.augment.turn.locked=0;else q.augment.turn.flags.push(mode);
+  assert.throws(()=>use(q,'collector',{die:0}));
+ }
+});
 test('practice chooses a highest tie, physically rerolls once and keeps count and replay snapshot',()=>{
  const s=fixture(['practice']);use(s,'practice',{target:s.players[1].id});advanceAugment(s,()=>0);rolled(s,[2,6,6,3,1]);afterAugmentRoll(s,()=>1);
  assert.equal(s.augment.turn.reroll.index,2);assert.equal(s.rollPhase,'shaking');assert.deepEqual(s.held,[true,true,false,true,true]);
@@ -42,7 +138,7 @@ test('receipt pays once only for actual reroll and cannot be undone through repl
 });
 test('hostage face seals survive cat rewind and reject every face edit',()=>{
  const s=fixture(['hostage']);give(s.players[1],['cat','alchemy','worldFlip']);use(s,'hostage',{target:s.players[1].id});advanceAugment(s,()=>0);rolled(s);afterAugmentRoll(s,()=>0);
- useAugment(s,s.players[1],{op:'resolve',value:1,indices:[0,1]},()=>0);s.rollCount=3;
+ useAugment(s,s.players[1],{op:'resolve',value:1,indices:[0,1,2]},()=>0);s.rollCount=3;
  useAugment(s,s.players[1],{op:'use',id:'cat'},()=>0);assert.deepEqual(s.dice.slice(0,2),[1,1]);assert.deepEqual(s.held.slice(0,2),[true,true]);
  for(const command of [{op:'use',id:'alchemy',die:0,value:6},{op:'use',id:'worldFlip',indices:[0]}])assert.equal(applyGameAction(s,s.players[1].id,{type:'augment',command},()=>0).ok,false);
 });
@@ -70,8 +166,8 @@ test('catalog has 48 specified cards, one evolution, and eight events',()=>{
 test('draft offers, refresh, ownership, evolution and pause guards',()=>{
  const s=fixture();s.augment.drafting=true;s.players[0].augment.offers=['nudge','mirror','cleaner'];
  assert.throws(()=>useAugment(s,s.players[0],{op:'pick',id:'wild'},()=>0));
- useAugment(s,s.players[0],{op:'refresh'},()=>0);assert.equal(s.players[0].augment.offers.length,3);
- assert.throws(()=>useAugment(s,s.players[0],{op:'refresh'},()=>0));
+ useAugment(s,s.players[0],{op:'refresh',offerIndex:0,id:s.players[0].augment.offers[0]},()=>0);assert.equal(s.players[0].augment.offers.length,3);
+ assert.throws(()=>useAugment(s,s.players[0],{op:'refresh',offerIndex:0,id:s.players[0].augment.offers[0]},()=>0));
  useAugment(s,s.players[0],{op:'pick',id:s.players[0].augment.offers[0]},()=>0);assert.equal(s.augment.drafting,false);
  assert.equal(roomStateSchema.safeParse(s).success,true);
  give(s.players[0],['nudge']);s.augment.round=7;s.augment.drafting=true;s.players[0].augment.offers=['fourth'];
@@ -86,28 +182,28 @@ test('all face edits, charges, copy, final lock and anti-cheat validation',()=>{
  assert.throws(()=>use(s,'alchemy',{die:1,value:6}));assert.throws(()=>use(s,'nudge',{die:1,value:1}));
 });
 test('silver passive score conditions and non-repeating savings',()=>{
- const cases=[['cleaner',[1,1,2,3,4],'choice',6],['collector',[1,2,3,4,5],'choice',8],['rest',[1,2,3,4,5],'choice',6],['odd',[1,1,3,5,2],'choice',6],['upper',[6,6,6,1,2],'sixes',5],['six',[6,6,6,1,2],'choice',7]];
+ const cases=[['cleaner',[1,1,2,3,4],'choice',6],['artisan',[1,2,3,4,5],'choice',5],['rest',[1,2,3,4,5],'choice',6],['odd',[1,1,3,5,2],'choice',6],['upper',[6,6,6,1,2],'sixes',5],['six',[6,6,6,1,2],'choice',7]];
  for(const [id,dice,c,extra] of cases){const s=rolled(fixture([id]),dice);assert.equal(augmentedScore(s,s.players[0],c).extra,extra,id);}
  const s=rolled(fixture(['savings','stubborn','lastmove','underdog']));s.augment.turn.kept=[0,1];s.augment.turn.flags=['third'];s.augment.turn.gap=25;s.players[0].augment.streak=2;
  assert.equal(augmentedScore(s,s.players[0],'choice').extra,24);recordAugment(s,s.players[0],'choice');assert.equal(s.players[0].augment.savingsPaid,true);
 });
 test('gold and prism category rules, bets, raw upper and bonus floor',()=>{
- const cases=[['fakeHouse',[6,6,6,6,1],'fullHouse',25],['artisan',[1,2,3,4,5],'largeStraight',48],['hunter',[6,6,6,6,1],'fourOfAKind',40],['chance',[6,6,6,6,6],'choice',55],['defect',[6,6,6,6,1],'yacht',40]];
+ const cases=[['fakeHouse',[6,6,6,6,1],'fullHouse',25],['artisan',[1,2,3,4,5],'largeStraight',30],['hunter',[6,6,6,6,1],'fourOfAKind',40],['chance',[6,6,6,6,6],'choice',30],['defect',[6,6,6,6,1],'yacht',40]];
  for(const [id,dice,c,want] of cases){const s=rolled(fixture([id]),dice);assert.equal(augmentedScore(s,s.players[0],c).score,want,id);}
- const s=fixture(['target','loan','devil','substitute']);use(s,'target',{category:'yacht'});use(s,'loan');use(s,'devil');rolled(s,[6,6,6,6,6]);assert.equal(augmentedScore(s,s.players[0],'yacht').total,142);
- use(s,'substitute');assert.equal(augmentedScore(s,s.players[0],'yacht').total,47);
+ const s=fixture(['target','loan','devil','substitute']);use(s,'target',{category:'yacht'});use(s,'loan');use(s,'devil');rolled(s,[6,6,6,6,6]);assert.equal(augmentedScore(s,s.players[0],'yacht').total,132);
+ use(s,'substitute');assert.equal(augmentedScore(s,s.players[0],'yacht').total,82);
  const fail=fixture(['loan','devil']);use(fail,'loan');use(fail,'devil');rolled(fail,[1,1,1,1,1]);recordAugment(fail,fail.players[0],'choice');assert.equal(playerTotals(fail.players[0]).total,0);
 });
 test('zero repair and parallel scoring do not fill extra slots or retrigger bonuses',()=>{
  const s=rolled(fixture(['erase','parallel','cleaner']),[1,1,1,1,1]);s.players[0].scores.yacht=0;
  use(s,'erase',{category:'yacht'});use(s,'parallel',{category:'fullHouse'});recordAugment(s,s.players[0],'ones');
- assert.equal(s.players[0].scores.yacht,50);assert.equal(s.players[0].scores.fullHouse,null);assert.equal(s.players[0].augment.bonus,8);assert.equal(s.players[0].augment.rawUpper,5);
+ assert.equal(s.players[0].scores.yacht,50);assert.equal(s.players[0].scores.fullHouse,null);assert.equal(s.players[0].augment.bonus,11);assert.equal(s.players[0].augment.rawUpper,5);
  const b=rolled(fixture(['erase']));use(b,'erase');recordAugment(b,b.players[0],'choice');assert.equal(b.players[0].augment.bonus,10);
 });
 test('attacks, shields, capped reflection, theft, gold swaps and copying',()=>{
  for(const id of ['thief','lock','seal']){const s=fixture([id]);use(s,id,{target:s.players[1].id});assert.equal(s.players[1].augment.curse.id,id);assert.throws(()=>use(s,id,{target:s.players[1].id}));}
  for(const id of ['shield','reflect']){const s=fixture(['thief']);give(s.players[1],[id]);use(s,'thief',{target:s.players[1].id});assert.equal(s.players[1].augment.curse,null);assert.equal(s.players[0].augment.items[0].remaining,1);}
- const s=rolled(fixture(['spectator','parasite']));s.players[0].augment.curse={id:'thief',from:s.players[1].id};recordAugment(s,s.players[0],'choice');assert.equal(s.players[1].augment.bonus,8);
+ const s=rolled(fixture(['spectator','parasite']));s.players[0].augment.curse={id:'thief',from:s.players[1].id,active:true,resolved:true};s.dice=[6,6,6,6,6];recordAugment(s,s.players[0],'choice');assert.equal(s.players[1].augment.bonus,15);
  const swap=fixture(['swap','fourth']);give(swap.players[1],['clone']);use(swap,'swap',{target:swap.players[1].id,other:'clone',category:'fourth'});assert.ok(swap.players[0].augment.items.some(i=>i.id==='clone'));assert.equal(swap.players[1].augment.items[0].id,'fourth');
  const copy=fixture(['doppel']);give(copy.players[1],['fourth']);use(copy,'doppel',{target:copy.players[1].id,other:'fourth'});assert.ok(copy.players[0].augment.items.some(i=>i.id==='fourth'));assert.equal(copy.players[1].augment.items[0].id,'fourth');
 });
@@ -150,9 +246,9 @@ test('roll modifiers, revival and forced hold are applied at next personal turn'
 test('duel compares only subsequent turns and settles once; debt cannot evade its cap',()=>{
  const s=fixture(['duel']);use(s,'duel',{target:s.players[1].id});assert.equal(s.augment.duels.length,1);
  rolled(s,[6,6,6,6,6]);recordAugment(s,s.players[0],'choice');assert.equal(s.augment.duels[0].aScore,null);
- advanceAugment(s,()=>0);assert.equal(s.augment.turn.maxRolls,2);s.augment.event='debt';assert.throws(()=>useAugment(s,s.players[1],{op:'use',id:'debt'},()=>0));
+ advanceAugment(s,()=>0);useAugment(s,s.players[1],{op:'resolve',value:1},()=>0);assert.equal(s.augment.turn.maxRolls,2);s.augment.event='debt';assert.throws(()=>useAugment(s,s.players[1],{op:'use',id:'debt'},()=>0));
  rolled(s,[1,2,3,4,5]);recordAugment(s,s.players[1],'choice');advanceAugment(s,()=>0);assert.equal(s.currentPlayerId,s.players[0].id);assert.equal(s.augment.turn.maxRolls,2);
- rolled(s,[6,6,6,6,6]);recordAugment(s,s.players[0],'sixes');assert.equal(s.players[0].augment.bonus,20);assert.equal(s.augment.duels.length,0);
+ rolled(s,[6,6,6,6,6]);recordAugment(s,s.players[0],'sixes');assert.equal(s.players[0].augment.bonus,35);assert.equal(s.augment.duels.length,0);
 });
 test('spectator income is capped per round and raw upper ignores multiplied scores',()=>{
  const s=fixture([],4);give(s.players[0],['spectator','parasite']);
@@ -214,7 +310,7 @@ test('flash catalog: tier distribution, ten percent offers and refresh does not 
  for(const roll of [0,9,10,99]){
   const s=fixture();initAugment(s,n=>n===100?roll:0);const p=s.players[0];
   assert.equal(p.augment.offers.filter(id=>AUGMENTS.find(d=>d.id===id).flash).length,roll<10?1:0);
-  useAugment(s,p,{op:'refresh'},n=>n===100?(roll<10?99:0):0);
+  useAugment(s,p,{op:'refresh',offerIndex:2,id:p.augment.offers[2]},n=>n===100?(roll<10?99:0):0);
   assert.equal(p.augment.offers.filter(id=>AUGMENTS.find(d=>d.id===id).flash).length,roll<10?1:0);
  }
 });
@@ -233,14 +329,14 @@ test('all targeted flash effects reserve, defend and apply to the next personal 
   const shield=fixture([id]);give(shield.players[1],['clone','shield']);use(shield,id,{...args,target:shield.players[1].id,seals:args.seals.map(x=>({...x,target:shield.players[1].id}))});assert.equal(shield.players[1].augment.curse,null);
  }
 });
-test('global flash affects each next turn including caster and expires; gold strike resumes',()=>{
- for(const id of ['handsUp','strike','squid']) {
+test('mixer reserves each next turn and no longer limits voluntary holds',()=>{
+ for(const id of ['handsUp']) {
   const s=rolled(fixture([id,'fourth']),[6,6,6,6,6]);give(s.players[1],['fourth']);use(s,id);recordAugment(s,s.players[0],'choice');
   assert.equal(s.players[0].augment.curse.active,false);advanceAugment(s,()=>0);
   assert.equal(s.players[1].augment.curse.active,true);
   assert.equal(s.augment.turn.maxRolls,id==='strike'?3:id==='squid'?2:4);
   rolled(s,[6,6,6,6,6]);
-  if(id==='handsUp')assert.equal(applyGameAction(s,s.players[1].id,{type:'setHolds',held:[true,true,true,false,false]},()=>0).ok,false);
+  if(id==='handsUp')assert.equal(applyGameAction(s,s.players[1].id,{type:'setHolds',held:[true,true,true,false,false]},()=>0).ok,true);
   if(id==='squid')assert.equal(augmentedScore(s,s.players[1],'choice').score,60);
   recordAugment(s,s.players[1],'choice');assert.equal(s.players[1].augment.curse,null);advanceAugment(s,()=>0);
   assert.equal(s.players[0].augment.curse.active,true);assert.equal(s.augment.turn.maxRolls,id==='strike'?4:id==='squid'?2:4);
@@ -254,9 +350,9 @@ test('flash forbids double curses and blocking every remaining category',()=>{
 
 test('reflection damage cap matches preview and global barriers cannot be bypassed',()=>{
  const s=rolled(fixture(['thief']),[1,2,3,5,6]);s.players[0].scores.ones=10;s.players[0].augment.rawUpper=10;s.players[0].augment.curse={id:'thief',from:s.players[1].id};give(s.players[1],['reflect']);
- use(s,'thief',{target:s.players[1].id});const before=playerTotals(s.players[0]).total,preview=scorePreview(s,s.players[0],'choice');recordAugment(s,s.players[0],'choice');assert.equal(playerTotals(s.players[0]).total-before,preview);assert.equal(preview,12);
- const q=fixture(['squid']);use(q,'squid');advanceAugment(q,()=>0);q.augment.event='debt';assert.throws(()=>useAugment(q,q.players[1],{op:'use',id:'debt'},()=>0));
- const r=fixture(['strike']);give(r.players[1],['reflect']);use(r,'strike');assert.equal(r.players[1].augment.curse,null);assert.equal(r.players[0].augment.curse.id,'strike');
+ use(s,'thief',{target:s.players[1].id});const before=playerTotals(s.players[0]).total,preview=scorePreview(s,s.players[0],'choice');recordAugment(s,s.players[0],'choice');assert.equal(playerTotals(s.players[0]).total-before,preview);assert.equal(preview,17);
+ const q=fixture(['squid']);q.players.forEach(p=>p.augment.bonus=30);use(q,'squid');advanceAugment(q,()=>0);q.augment.event='debt';assert.throws(()=>useAugment(q,q.players[1],{op:'use',id:'debt'},()=>0));
+ const r=fixture(['strike']);r.players[0].scores.yacht=0;r.players[1].scores.yacht=50;give(r.players[1],['reflect']);use(r,'strike',{category:'yacht'});assert.equal(r.players[1].augment.curse,null);assert.equal(r.players[0].scores.yacht,0);
 });
 test('recorded lower score exchange preserves upper accounting, charges and once-per-victim guard',()=>{
  const s=fixture(['closed']),p=s.players[0],q=s.players[1];p.scores.yacht=0;for(const key of SCORE_CATEGORIES)q.scores[key]=0;q.scores.yacht=50;p.augment.rawUpper=30;
@@ -270,9 +366,9 @@ test('flash draw is ten percent in a seeded sample, with at most one card',()=>{
  const s=fixture();for(let i=0;i<10000;i++){initAugment(s,random);const flash=s.players[0].augment.offers.filter(id=>AUGMENTS.find(d=>d.id===id).flash);assert.ok(flash.length<=1);hits+=flash.length;}
  assert.ok(hits>=850&&hits<=1150,`observed ${hits}/10000`);
 });
-test('squid and devil cap multipliers at three and round down half scores',()=>{
- const s=fixture(['devil']);use(s,'devil');s.players[0].augment.curse={id:'squid',from:s.players[1].id,active:true};rolled(s,[6,6,6,6,6]);assert.equal(augmentedScore(s,s.players[0],'choice').score,90);
- s.augment.turn.flags=[];s.dice=[1,2,3,5,6];assert.equal(augmentedScore(s,s.players[0],'choice').score,8);
+test('jackpot does not multiply ordinary category scores; devil remains independent',()=>{
+ const s=fixture(['devil']);use(s,'devil');s.players[0].augment.curse={id:'squid',from:s.players[1].id,active:true};rolled(s,[6,6,6,6,6]);assert.equal(augmentedScore(s,s.players[0],'choice').score,60);
+ s.augment.turn.flags=[];s.dice=[1,2,3,5,6];assert.equal(augmentedScore(s,s.players[0],'choice').score,17);
 });
 
 test('limited face edits cannot be spammed in a turn or after exhaustion',()=>{
@@ -343,7 +439,7 @@ test('tomorrow stores low face, survives serialization and starts next turn held
 
 test('bounty and dinner pay once, are shieldable, and remain separate from multipliers',()=>{
  let s=fixture(['bounty']);const p=s.players[0],q=s.players[1];use(s,'bounty',{target:q.id,value:6});assert.equal(q.augment.curse.other,'6');advanceAugment(s,()=>0);rolled(s,[6,6,6,1,1]);recordAugment(s,q,'sixes');assert.equal(p.augment.bonus,6);assert.equal(q.scores.sixes,18);
- s=fixture(['dinner']);use(s,'dinner');assert.equal(s.players[0].augment.bonus,3);assert.equal(s.players[0].augment.curse.active,false);advanceAugment(s,()=>0);rolled(s,[2,2,2,2,2]);assert.equal(augmentedScore(s,s.players[1],'choice').extra,-2);recordAugment(s,s.players[1],'choice');assert.equal(s.players[1].augment.bonus,-2);
+ s=fixture(['dinner']);use(s,'dinner');assert.equal(s.players[0].augment.bonus,3);assert.equal(s.players[0].augment.curse.active,false);advanceAugment(s,()=>0);rolled(s,[2,2,2,2,2]);assert.equal(augmentedScore(s,s.players[1],'choice').extra,-4);recordAugment(s,s.players[1],'choice');assert.equal(s.players[1].augment.bonus,-4);
 });
 test('taste requires an opponent final face and no edits after the first roll',()=>{
  const s=rolled(fixture(['taste','nudge']));s.players[1].augment.lastDice=[1,2,3,4,5];
@@ -374,14 +470,14 @@ test('parallel roll preserves initial holds, consumes one roll, restores A and l
 test('parcel money transfer covers all faces, zero floor, damage cap and expiry',()=>{
  for(let face=1;face<=6;face++){
  const s=fixture(['bombParcel']);s.players.forEach(p=>p.augment.bonus=30);use(s,'bombParcel',{target:s.players[1].id});advanceAugment(s,()=>0);assert.equal(s.augment.turn.pending,'bombParcel');useAugment(s,s.players[1],{op:'resolve',value:1},()=>face-1);
- assert.equal(s.players[0].augment.bonus,face<=3?40:24);assert.equal(s.players[1].augment.bonus,face<=3?20:36);assert.equal(s.augment.turn.pending,undefined);
+ assert.equal(s.players[0].augment.bonus,face<=3?50:15);assert.equal(s.players[1].augment.bonus,face<=3?10:45);assert.equal(s.augment.turn.pending,undefined);
  }
  const s=fixture(['bombParcel']);s.players[1].augment.bonus=2;use(s,'bombParcel',{target:s.players[1].id});advanceAugment(s,()=>0);useAugment(s,s.players[1],{op:'resolve',value:0},()=>0);assert.equal(playerTotals(s.players[1]).total,0);assert.equal(s.players[0].augment.bonus,2);
 });
 test('hostage seals final dice, allows ordered exchange or ransom and honors preheld exclusions',()=>{
  for(const value of [0,1]){
- const s=rolled(fixture(['hostage','nudge']),[1,2,3,4,5]);s.players[1].augment.bonus=20;use(s,'hostage',{target:s.players[1].id,indices:[0,1]});use(s,'nudge',{die:0,value:2});recordAugment(s,s.players[0],'choice');advanceAugment(s,()=>0);rolled(s,[6,6,6,5,5]);afterAugmentRoll(s,()=>0);assert.equal(s.augment.turn.pending,'hostage');
- useAugment(s,s.players[1],{op:'resolve',value,indices:[4,3]},()=>0);if(value===0)assert.equal(s.players[0].augment.bonus,10);else {assert.deepEqual(s.dice,[6,6,6,1,1]);assert.deepEqual(s.augment.turn.fixed,[4,3]);assert.equal(applyGameAction(s,s.players[1].id,{type:'setHolds',held:Array(5).fill(false)},()=>0).ok,false);}assert.equal(s.players[1].augment.curse,null);
+ const s=rolled(fixture(['hostage','nudge']),[1,2,3,4,5]);s.players[1].augment.bonus=40;use(s,'hostage',{target:s.players[1].id,indices:[0,1]});use(s,'nudge',{die:0,value:2});recordAugment(s,s.players[0],'choice');advanceAugment(s,()=>0);rolled(s,[6,6,6,5,5]);afterAugmentRoll(s,()=>0);assert.equal(s.augment.turn.pending,'hostage');
+ useAugment(s,s.players[1],{op:'resolve',value,indices:[4,3,2]},()=>0);if(value===0)assert.equal(s.players[0].augment.bonus,30);else {assert.deepEqual(s.dice,[6,6,1,1,1]);assert.deepEqual(s.augment.turn.fixed,[4,3,2]);assert.equal(applyGameAction(s,s.players[1].id,{type:'setHolds',held:Array(5).fill(false)},()=>0).ok,false);}assert.equal(s.players[1].augment.curse,null);
  }
 });
 

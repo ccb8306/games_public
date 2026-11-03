@@ -6,12 +6,13 @@ import {
   categoryScore,
   totals,
   playerTotals,
-  scorePreview,
+  scoreBreakdown,
   blockedCategory,
   type RoomState,
   type ScoreCategory,
 } from "@yacht/shared";
 import { SCORE_LABELS } from "../scoreLabels";
+import { describeScore } from "../scoreBreakdown";
 import type { Qualification, RecordedScore } from "../feedback/qualifications";
 type Props = {
   room: RoomState;
@@ -40,6 +41,15 @@ export function ScoreTable({
   const dice = room.dice.every((die): die is number => die !== null)
     ? room.dice
     : null;
+  const me = players.find((p) => p.id === playerId);
+  const previews = Object.fromEntries(
+    SCORE_CATEGORIES.map((c) => [
+      c,
+      room.augment && canScore && dice && me
+        ? scoreBreakdown(room, me, c)
+        : null,
+    ]),
+  );
   const renderCategory = (category: ScoreCategory) => (
     <tr key={category} className={selected === category ? "selected" : ""}>
       <th scope="row">{SCORE_LABELS[category]}</th>
@@ -63,8 +73,17 @@ export function ScoreTable({
           ) : p?.id === playerId && canScore && dice ? (
             <button
               className="preview-score"
-              disabled={blockedCategory(p, category)}
-              title={blockedCategory(p, category) ? "이번 턴 봉인된 족보" : ""}
+              disabled={
+                blockedCategory(p, category) ||
+                (!!room.augment && !previews[category])
+              }
+              title={
+                blockedCategory(p, category)
+                  ? "이번 턴 봉인된 족보"
+                  : previews[category]
+                    ? describeScore(previews[category]!)
+                    : "현재 기록할 수 없는 칸"
+              }
               onClick={() => onSelect(category)}
               onPointerDown={(event) => {
                 inputType.current = event.pointerType;
@@ -80,10 +99,14 @@ export function ScoreTable({
                   onQuickConfirm?.(category);
               }}
               aria-pressed={selected === category}
-              aria-label={`${SCORE_LABELS[category]} ${room.augment ? scorePreview(room, p, category) : categoryScore(category, dice)}점 선택`}
+              aria-label={
+                room.augment
+                  ? `${SCORE_LABELS[category]} · ${previews[category] ? describeScore(previews[category]!) : "기록 불가"}`
+                  : `${SCORE_LABELS[category]} ${categoryScore(category, dice)}점 선택`
+              }
             >
               {room.augment
-                ? scorePreview(room, p, category)
+                ? (previews[category]?.recorded ?? "—")
                 : categoryScore(category, dice)}
             </button>
           ) : p?.id === room.currentPlayerId &&

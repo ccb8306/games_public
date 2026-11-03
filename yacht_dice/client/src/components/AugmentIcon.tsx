@@ -6,6 +6,15 @@ export function AugmentIcon({ id }: { id: string }) {
   const n = AUGMENTS.findIndex((a) => a.id === id),
     seed = Math.max(0, n);
   const motifs: Record<string, string> = {
+    loan: "M18 39l11-11 8 8 12-18M39 18h10v10M18 46h30M21 20h0m8 0h0",
+    thief: "M20 17h24v30H20ZM25 25h14M25 31h14M26 39l4 4 9-10",
+    duel: "M18 18l28 28m0-28L18 46M15 40l9 9m16-34 9 9M15 24l9-9m16 34 9-9",
+    collector:
+      "M18 20h13v15H18ZM35 20h13v15H35ZM24 27h0m17 0h0M18 43h28m-6-6 6 6-6 6",
+    artisan: "M17 44h9v-8h9v-8h10M18 18h12v12H18ZM24 24h0M39 14v9m-4-4h8",
+    fakeHouse: "M16 29 32 16l16 13M21 27v20h22V27M26 32h12v9H26ZM32 32v9",
+    chance:
+      "M17 23h30v21H17ZM32 28a6 6 0 1 0 .1 0M21 33h0m22 0h0M22 17h20M22 49h20",
     practice:
       "M22 22h20v20H22ZM28 28h0m8 8h0M17 35a17 17 0 1 0 1-14M13 17l5 4 5-4",
     misdelivery:
@@ -44,7 +53,8 @@ export function AugmentIcon({ id }: { id: string }) {
     construction: "M18 25h28v14H18ZM20 25l10 14m4-14 10 14M22 39v8m20-8v8",
     handsUp: "M22 42V22m0 9-6-5m6-4 5-6m15 26V22m0 9 6-5m-6-4-5-6M27 43h10",
     closed: "M17 23h30v23H17ZM23 23v-7h18v7M22 30l20 10m0-10L22 40",
-    strike: "M20 19h24v20H20ZM32 39v10M25 25h14M25 31h14",
+    strike:
+      "M20 24h11v14H20ZM35 27h11v14H35ZM18 18h24l5 5M46 46H22l-5-5M43 17l4 6-7 1M21 47l-4-6 7-1",
     squid:
       "M15 23a5 5 0 1 0 .1 0M27 29l6-12 6 12ZM43 18h10v11H43ZM20 42h28M25 38v8m14-8v8",
     change: "M20 39 39 20l5 5-19 19-5-5M20 20h7m-3-4v8M42 36v9m-4-5h8",

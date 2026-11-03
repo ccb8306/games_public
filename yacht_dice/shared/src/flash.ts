@@ -7,8 +7,6 @@ import {
 
 export const flashGlobal = [
   "handsUp",
-  "strike",
-  "squid",
   "dinner",
   "confiscate",
 ];
@@ -20,8 +18,6 @@ export function goldDisabled(p: PublicPlayer, id: string) {
     !!curse?.active &&
     ((curse.id === "ordinaryDay" &&
       AUGMENTS.find((d) => d.id === id)?.trigger === "active") ||
-      (curse.id === "strike" &&
-        AUGMENTS.find((d) => d.id === id)?.rarity === "gold") ||
       (curse.id === "broken" && curse.other === id))
   );
 }
@@ -36,6 +32,19 @@ export function flashTargets(s: RoomState, p: PublicPlayer, c: AugmentCommand) {
     alive = s.players.filter((q): q is PublicPlayer => !!q && !q.forfeited);
   const opponent = (target?: string) =>
     alive.find((q) => q.id === target && q.id !== p.id && remaining(q).length);
+  if (id === "strike") {
+    const key = c.category as (typeof SCORE_CATEGORIES)[number];
+    if (!SCORE_CATEGORIES.slice(6).includes(key)) throw Error("회전할 하단 칸을 고르세요.");
+    const eligible = alive.filter((q) => q.scores[key] !== null && !q.augment!.scoreSwapped);
+    if (eligible.length < 2 || !eligible.includes(p)) throw Error("나를 포함해 아직 교환당하지 않은 두 명 이상이 기록한 칸이 필요해요.");
+    return eligible.sort((a,b)=>a.slot-b.slot).map(q=>({q,categories:[key],other:undefined}));
+  }
+  if (id === "squid") {
+    if (s.augment!.jackpot || remaining(p).length < 2) throw Error("진행 중인 공동 승부가 없고 다음 내 턴이 있어야 해요.");
+    const eligible = alive.filter(q=>remaining(q).length && !q.augment!.curse && Math.max(0,Object.values(q.scores).reduce<number>((a,b)=>a+(b??0),0)+q.augment!.bonus+(q.augment!.rawUpper>=63?35:0))>=20);
+    if (eligible.length<2 || !eligible.includes(p)) throw Error("나를 포함해 20점 이상 가진 참가자가 두 명 필요해요.");
+    return eligible.map(q=>({q,categories:undefined,other:undefined}));
+  }
   if (flashGlobal.includes(id)) {
     if (
       p.augment!.curse ||

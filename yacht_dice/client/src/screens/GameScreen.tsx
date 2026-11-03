@@ -137,7 +137,8 @@ export function GameScreen({
           <ScoreConfirmation
             selected={selected}
             preview={scoring.preview}
-            enabled={canScore && selected !== null}
+            breakdown={scoring.breakdown}
+            enabled={canScore && selected !== null && scoring.preview !== null}
             reason={scoring.reason}
             onConfirm={scoring.confirm}
           />
@@ -221,9 +222,7 @@ export function GameScreen({
                 current?.augment?.curse?.active
                   ? current.augment.curse.id === "butterFingers"
                     ? 1
-                    : current.augment.curse.id === "handsUp"
-                      ? 2
-                      : undefined
+                    : undefined
                   : undefined
               }
               disabled={

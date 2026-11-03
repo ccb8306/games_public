@@ -19,7 +19,9 @@ export function PlayerAugments({
     const state = goldDisabled(player, item.id)
       ? "이번 턴 사용 중지"
       : item.remaining === 0 && def.charges !== 0
-        ? "사용 완료"
+        ? ["artisan", "fakeHouse"].includes(item.id)
+          ? "조작 완료 · 자동 효과 유지"
+          : "사용 완료"
         : item.usedTurn === turn && def.trigger === "active"
           ? "이번 턴 사용함"
           : def.trigger === "passive"
@@ -44,7 +46,11 @@ export function PlayerAugments({
                 key={`${item.id}-${index}`}
                 type="button"
                 className={`player-augment ${data.def.rarity} ${data.def.flash ? "flash" : ""}`}
-                data-spent={item.remaining === 0 && data.def.charges !== 0}
+                data-spent={
+                  item.remaining === 0 &&
+                  data.def.charges !== 0 &&
+                  !["artisan", "fakeHouse"].includes(item.id)
+                }
                 aria-label={`${data.def.name} 설명`}
                 aria-haspopup="dialog"
                 title={`${data.def.name} · ${data.status}\n${data.def.description}`}

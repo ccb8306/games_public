@@ -10,6 +10,10 @@ import {
 } from "@yacht/shared";
 
 export const DIRECT_INPUT_IDS = [
+  "collector",
+  "artisan",
+  "fakeHouse",
+  "chance",
   "tomorrow",
   "nudge",
   "evolution",
@@ -63,6 +67,29 @@ export function AugmentActionInputs({
       return false;
     }
   }
+  if (id === "chance")
+    return (
+      <div className="augment-direct">
+        <p>
+          현재 환전액{" "}
+          <strong>
+            {Math.min(
+              40,
+              room.dice.reduce<number>((sum, n) => sum + (n ?? 0), 0) + 10,
+            )}
+            점
+          </strong>{" "}
+          · 사용한 뒤 점수표에서 빈 하단 칸을 누르세요. 추가 굴림은 끝납니다.
+        </p>
+        <button
+          className="primary"
+          disabled={!legal({})}
+          onClick={() => onUse({})}
+        >
+          이 금액으로 환전하기
+        </button>
+      </div>
+    );
   if (id === "tomorrow")
     return (
       <div className="augment-choice">
@@ -166,7 +193,32 @@ export function AugmentActionInputs({
         )}
       </div>
     );
-  if (["alchemy", "wild", "revive"].includes(id))
+  if (id === "fakeHouse")
+    return (
+      <div className="augment-direct">
+        <p>합은 그대로! 원하는 두 주사위의 결과를 눌러 바로 나눠주세요.</p>
+        <div className="augment-choice">
+          {room.dice.flatMap((n, i) =>
+            room.dice.flatMap((m, j) => {
+              if (n === null || m === null || i >= j) return [];
+              const low = Math.floor((n + m) / 2),
+                high = Math.ceil((n + m) / 2);
+              if (n === low && m === high) return [];
+              return (
+                <button
+                  key={`${i}-${j}`}
+                  disabled={!legal({ indices: [i, j] })}
+                  onClick={() => onUse({ indices: [i, j] })}
+                >
+                  {i + 1}번·{j + 1}번: {n}+{m} → {low}+{high}
+                </button>
+              );
+            }),
+          )}
+        </div>
+      </div>
+    );
+  if (["artisan", "alchemy", "wild", "revive"].includes(id))
     return (
       <div className="augment-direct">
         {id !== "revive" && (
@@ -177,7 +229,11 @@ export function AugmentActionInputs({
                 <button
                   key={i}
                   aria-pressed={die === i}
-                  disabled={!enabled}
+                  disabled={
+                    !enabled ||
+                    (id === "artisan" &&
+                      room.dice.filter((v) => v === n).length < 2)
+                  }
                   onClick={() => setDie(i)}
                 >
                   {i + 1}번 · {n}
@@ -189,7 +245,11 @@ export function AugmentActionInputs({
         {die !== null && (
           <div className="augment-choice" aria-label="변경할 눈">
             {[1, 2, 3, 4, 5, 6]
-              .filter((n) => n !== room.dice[die])
+              .filter(
+                (n) =>
+                  n !== room.dice[die] &&
+                  (id !== "artisan" || !room.dice.includes(n)),
+              )
               .map((n) => (
                 <button
                   key={n}
@@ -203,7 +263,7 @@ export function AugmentActionInputs({
         )}
       </div>
     );
-  if (["choiceRoll", "even", "chaos", "exchange"].includes(id))
+  if (["collector", "choiceRoll", "even", "chaos", "exchange"].includes(id))
     return (
       <div className="augment-direct">
         <p>

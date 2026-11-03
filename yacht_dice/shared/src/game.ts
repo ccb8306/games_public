@@ -136,7 +136,6 @@ export function applyGameAction(state: RoomState, actorId: string, action: Actio
       if(action.held.length!==state.dice.length) return fail("주사위 개수가 맞지 않습니다.");
       if(state.augment?.turn.reroll)return fail("진행 중인 무료 재굴림을 먼저 완료하세요.");
       if(state.augment?.turn.locked!=null&&!action.held[state.augment.turn.locked])return fail("강제 고정된 주사위는 해제할 수 없습니다.");
-      if(state.players.find(p=>p?.id===actorId)?.augment?.curse?.active && state.players.find(p=>p?.id===actorId)?.augment?.curse?.id === "handsUp" && action.held.filter(Boolean).length>2)return fail("이번 턴에는 주사위를 2개까지만 보관할 수 있어요.");
       if(state.augment?.turn.fixed?.some(i=>!action.held[i])) return fail("인질 주사위는 이번 턴 끝까지 보관해야 해요.");
       next.held = [...action.held];
       const curse = state.players.find(p => p?.id === actorId)?.augment?.curse;

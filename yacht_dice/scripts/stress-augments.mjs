@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {AUGMENTS,EVENTS,SCORE_CATEGORIES,emptyScorecard,initAugment,applyGameAction,completeRoll,afterAugmentRoll,roomStateSchema,playerTotals,pendingInstant} from '../shared/dist/index.js';
+import {AUGMENTS,EVENTS,SCORE_CATEGORIES,emptyScorecard,initAugment,applyGameAction,completeRoll,afterAugmentRoll,roomStateSchema,playerTotals,pendingInstant,scoreBreakdown} from '../shared/dist/index.js';
 
 const games=Number(process.argv[2]??1000), initialSeed=Number(process.argv[3]??20261103);
 let seed=initialSeed,actions=0,rejections=0,turns=0,refreshes=0;
@@ -31,7 +31,7 @@ function settle(){
   if(s.rollPhase==='shaking'){if(t.reroll)rerolls[t.reroll.id]=(rerolls[t.reroll.id]??0)+1;physical();continue;}
   if(t.pending){
    pending[t.pending]=(pending[t.pending]??0)+1;
-   const indices=s.dice.flatMap((_,i)=>t.preheld?.includes(i)?[]:[i]).slice(0,2);
+   const indices=s.dice.flatMap((_,i)=>t.preheld?.includes(i)?[]:[i]).slice(0,3);
    const value=t.pending==='forkSecond'?0:random(2);
    if(!command({op:'resolve',value,indices}))command({op:'resolve',value:1-value,indices},actor(),true);
    continue;
@@ -49,12 +49,12 @@ function argumentsFor(id,p){
  const their=q.augment.items.filter(i=>AUGMENTS.find(d=>d.id===i.id).rarity==='gold'),mine=p.augment.items.filter(i=>AUGMENTS.find(d=>d.id===i.id).rarity==='gold');
  return {die:id==='even'?s.dice.indexOf(1):die,value:id==='clone'?random(indices.length):['taste','misdelivery'].includes(id)?(q.augment.lastDice?.[0]??value):value,target:q.id,
   historyIndex:p.augment.archive?.length?random(p.augment.archive.length):0,
-  category:id==='closed'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&q.scores[k]!==null&&p.scores[k]!==q.scores[k]):id==='swap'?mine[0]?.id:id==='erase'?zero[0]:open[random(open.length)],other:their[0]?.id,
+  category:id==='strike'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&s.players.some(q=>q.id!==p.id&&q.scores[k]!==null&&!q.augment.scoreSwapped)):id==='closed'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&q.scores[k]!==null&&p.scores[k]!==q.scores[k]):id==='swap'?mine[0]?.id:id==='erase'?zero[0]:open[random(open.length)],other:their[0]?.id,
   indices:indices.slice(0,id==='worldFlip'?1+random(indices.length):2),
   seals:SCORE_CATEGORIES.filter(k=>q.scores[k]===null).slice(0,2).map(category=>({target:q.id,category}))};
 }
 function abilities(){
- const ids=[...actor().augment.items.map(i=>i.id),s.augment.event].filter(Boolean);
+ const ids=[...actor().augment.items.map(i=>i.id),'loanDouble',s.augment.event].filter(Boolean);
  // Rotate priority so finalizing abilities do not always suppress the same cards.
  const offset=random(ids.length||1);
  for(const id of ids.slice(offset).concat(ids.slice(0,offset))){
@@ -69,7 +69,7 @@ for(let game=0;game<games;game++){
   if(s.augment.drafting){
    for(const id of s.players.map(p=>p.id)){
     let p=s.players.find(p=>p.id===id);
-    if(!p.augment.refreshed&&random(3)===0){command({op:'refresh'},p,true);refreshes++;p=s.players.find(p=>p.id===id);}
+    for(let offerIndex=0;offerIndex<3;offerIndex++)if(!p.augment.rerolled[offerIndex]&&random(3)===0){command({op:'refresh',offerIndex,id:p.augment.offers[offerIndex]},p,true);refreshes++;p=s.players.find(p=>p.id===id);}
     const pick=s.augment.round===7&&p.augment.items.some(i=>i.id==='nudge')&&random(2)===0?'evolution':p.augment.offers[random(p.augment.offers.length)];picks[pick]=(picks[pick]??0)+1;command({op:'pick',id:pick},p,true);
    }
    for(const id of s.players.map(p=>p.id)){
@@ -97,7 +97,17 @@ for(let game=0;game<games;game++){
   }
   settle();if(s.augment.turn.oldWorld)command({op:'world',value:random(2)},actor(),true);
   const before=actor().id,open=SCORE_CATEGORIES.filter(k=>actor().scores[k]===null),offset=random(open.length);
-  let recorded=false;for(const category of open.slice(offset).concat(open.slice(0,offset)))if(act({type:'score',category})){recorded=true;break;}
+  let recorded=false;for(const category of open.slice(offset).concat(open.slice(0,offset))){
+   const previousTotal=playerTotals(actor()).total, previousBonus=actor().augment.bonus, preview=scoreBreakdown(s,actor(),category);
+   if(act({type:'score',category})){
+    const recordedPlayer=s.players.find(p=>p.id===before);
+    assert.ok(preview,'accepted record needs a preview');
+    assert.equal(recordedPlayer.scores[category],preview.recorded);
+    assert.equal(recordedPlayer.augment.bonus-previousBonus,preview.augment);
+    assert.equal(playerTotals(recordedPlayer).total-previousTotal,preview.total);
+    recorded=true;break;
+   }
+  }
   assert.ok(recorded,`no score possible: ${JSON.stringify(s.augment.turn)}`);turns++;
   assert.ok(roomStateSchema.safeParse(s).success,JSON.stringify(roomStateSchema.safeParse(s).error));
   for(const p of s.players){assert.ok(Number.isFinite(playerTotals(p).total)&&playerTotals(p).total>=0);assert.ok(p.augment.items.every(i=>i.remaining>=-1));}

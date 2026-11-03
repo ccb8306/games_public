@@ -10,7 +10,7 @@ const samples=Number(process.argv[2]??2000);
 const output=process.env.BALANCE_OUTPUT??"focused";
 const only=(process.env.BALANCE_IDS??"").split(",").filter(Boolean);
 const partition=Number(process.argv[3]??0), partitions=Number(process.argv[4]??1);
-const scenarioOnly=new Set(['tomorrow','inspection','memory','dropIt','receipt','broken','construction','closed','hostage','practice','misdelivery','goldRush','fork','bombParcel','taste','bounty']);
+const scenarioOnly=new Set(['loan','thief','duel','parallel','handsUp','strike','squid','collector','artisan','fakeHouse','chance','tomorrow','inspection','memory','dropIt','receipt','broken','construction','closed','hostage','practice','misdelivery','goldRush','fork','bombParcel','taste','bounty']);
 if(only.some(id=>scenarioOnly.has(id)))throw Error('These cards require scripts/choice-balance.mjs and scripts/stress-augments.mjs; this legacy paired bot does not support their choices.');
 const face=(seed,turn,roll,die)=>{let x=(seed^Math.imul(turn+1,73856093)^Math.imul(roll+1,19349663)^Math.imul(die+1,83492791))>>>0;x=Math.imul(x^(x>>>16),0x45d9f3b);return 1+((x^(x>>>16))>>>0)%6;};
 function play(card,seed,enabled){

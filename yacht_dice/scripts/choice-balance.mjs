@@ -25,13 +25,13 @@ for(const count of [5,6,7]){
   normal=base/futures;
   for(const id of Object.keys(totals))sums[id]+=totals[id]/futures-normal;
   let sealed=-Infinity;
-  for(let a=0;a<count;a++)for(let b=a+1;b<count;b++){let value=0;for(let k=0;k<futures;k++){const copy=[...first];copy[a]=copy[b]=1;value+=finish(copy,keys,2,[a,b]);}sealed=Math.max(sealed,value/futures);}
-  if(normal-10>sealed)pay++;sums.hostage+=Math.max(normal-10,sealed)-normal;
+  for(let a=0;a<count;a++)for(let b=a+1;b<count;b++)for(let c=b+1;c<count;c++){let value=0;for(let k=0;k<futures;k++){const copy=[...first];copy[a]=copy[b]=copy[c]=1;value+=finish(copy,keys,2,[a,b,c]);}sealed=Math.max(sealed,value/futures);}
+  if(normal-30>sealed)pay++;sums.hostage+=Math.max(normal-30,sealed)-normal;
  }
  const deltas=Object.fromEntries(Object.entries(sums).map(([k,v])=>[k,v/samples]));assert.ok(Object.values(deltas).every(Number.isFinite));
  results.push({dice:count,samples,targetTurnScoreDeltas:deltas,hostagePayRate:pay/samples});
 }
 const ids=['tomorrow','inspection','memory','dropIt','receipt','broken','construction','closed','hostage','practice','misdelivery','goldRush'];
-const report={seed:20261106,method:'Scenario screening using synthetic uniform dice, random remaining categories, duplicate-keeping rerolls and 12 continuations. Memory chooses among four random archived results by immediate category score. Hostage assumes enough money. Choice estimation has sampling optimism; not optimal play, physical probability, full-game win rates or synergy estimates. Zero-cost activation opportunities and charge frequency are not modeled.',results,cards:AUGMENTS.filter(d=>ids.includes(d.id)),bounds:{receiptPerUse:{caster:3,targetLoss:4},hostageRansom:10,closed:'One recorded lower category exchanged; not capped damage; once per victim; both can shield.',goldRush:'No new charges or items; preserves spent history; shielded players and borrowed items excluded.'}};
+const report={seed:20261106,method:'Scenario screening using synthetic uniform dice, random remaining categories, duplicate-keeping rerolls and 12 continuations. Memory chooses among four random archived results by immediate category score. Hostage assumes enough money. Choice estimation has sampling optimism; not optimal play, physical probability, full-game win rates or synergy estimates. Zero-cost activation opportunities and charge frequency are not modeled.',results,cards:AUGMENTS.filter(d=>ids.includes(d.id)),bounds:{receiptPerUse:{caster:3,targetLoss:4},hostageRansom:30,closed:'One recorded lower category exchanged; not capped damage; once per victim; both can shield.',goldRush:'No new charges or items; preserves spent history; shielded players and borrowed items excluded.'}};
 await mkdir('artifacts/augments',{recursive:true});
 await writeFile('artifacts/augments/rework-choice-balance.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));

@@ -34,9 +34,9 @@ const rows: [string, string, string, number, string][] = [
   ],
   [
     "collector",
-    "소심한 수집가",
-    "점수를 기록할 때 서로 다른 숫자가 5종 이상 있으면 보너스 +8점. 예: 1·2·3·4·5.",
-    0,
+    "중복은 못 참지",
+    "같은 눈이 둘 이상이면 그중 하나를 무료로 다시 던져요. 새 결과는 반드시 사용! 일반 굴림 횟수는 그대로. 턴당 1회·게임당 2회.",
+    2,
     "straight",
   ],
   [
@@ -174,16 +174,16 @@ const rows: [string, string, string, number, string][] = [
   ],
   [
     "fakeHouse",
-    "가짜 풀하우스",
-    "같은 숫자 4개만 모여도 풀하우스 칸에 25점을 쓸 수 있어요. 원래 풀하우스가 완성되면 원래 점수를 써요.",
-    0,
+    "강제 룸메이트",
+    "주사위 둘의 눈을 합은 그대로, 최대한 같게 나눠요. 1·5→3·3, 2·5→3·4! 턴당 1회·게임당 3회. 덤으로 4+1도 풀하우스 25점 인정.",
+    3,
     "kind",
   ],
   [
     "artisan",
-    "스트레이트 장인",
-    "스몰·라지 스트레이트를 완성해 그 칸에 기록하면, 그 족보 점수에 +18점.",
-    0,
+    "스트레이트 밀수업자",
+    "중복된 주사위 하나를 지금 없는 숫자로 바꿔요. 1·2·2·4·5에서 2→3! 턴당 1회·게임당 3회. 서로 다른 눈 5종 이상으로 기록하면 어느 칸이든 +5점.",
+    3,
     "straight",
   ],
   [
@@ -195,9 +195,9 @@ const rows: [string, string, string, number, string][] = [
   ],
   [
     "chance",
-    "찬스의 제왕",
-    "초이스 칸에 기록할 때 주사위 합에 +20점. 합이 25 이상이면 대신 +25점을 더해 기록해요.",
-    0,
+    "이번 판은 현금으로",
+    "족보를 포기하고 환전! 이번 주사위 합+10점을 빈 하단 칸에 쓸 수 있어요. 최대 40점, 배율·족보 가산점 제외. 이후 재굴림 종료. 게임당 1회.",
+    1,
     "sum",
   ],
   [
@@ -209,8 +209,8 @@ const rows: [string, string, string, number, string][] = [
   ],
   [
     "loan",
-    "점수 담보 대출",
-    "첫 굴림 전에 도전하세요. 이번 기본 족보 점수가 30점 이상이면 +30점, 미만이면 -15점. 게임당 1회.",
+    "여기서 두 배를 태워?",
+    "첫 굴림 전에 선언! 기본 족보 25점 이상이면 +20점, 미만이면 -10점. 두 번째 일반 굴림 뒤 두 배 걸고 한 번 더 던지면 +40/-20! 게임당 1회.",
     1,
     "gamble",
   ],
@@ -230,8 +230,8 @@ const rows: [string, string, string, number, string][] = [
   ],
   [
     "thief",
-    "주사위 도둑",
-    "상대를 찍어두면 그 사람의 다음 턴 득점에서 최대 8점을 내가 가져와요. 주사위 자체를 훔치지는 않아요. 게임당 2회.",
+    "압류 예고장",
+    "상대는 다음 턴 5점을 내거나 도전! 도전해서 기본 족보 25점 이상이면 내게 15점, 미만이면 내가 상대에게 8점. 소지 점수까지만, 피해 상한 15점 예외. 게임당 2회.",
     2,
     "attack",
   ],
@@ -300,8 +300,8 @@ const rows: [string, string, string, number, string][] = [
   ],
   [
     "parallel",
-    "평행 채점",
-    "기록할 칸 말고 다른 빈칸 하나를 골라요. 이번 주사위로 그 칸을 채점한 점수의 절반을 보너스로 받아요. 소수점은 버리고 그 칸은 남겨둬요. 게임당 1회.",
+    "한 턴에 두 탕",
+    "기록할 칸 말고 다른 빈칸 하나를 골라요. 그 칸 점수를 전액 보너스로! 최대 40점, 보너스 칸은 남아요. 별도 보너스는 재발동하지 않아요. 게임당 1회.",
     1,
     "lower",
   ],
@@ -335,8 +335,8 @@ const rows: [string, string, string, number, string][] = [
   ],
   [
     "duel",
-    "지옥의 합의",
-    "지금 턴 말고, 나와 상대의 다음 턴으로 대결해요. 둘 다 최대 2번 굴리고 기본 족보 점수가 높은 쪽이 +20점. 동점은 각 +10점. 게임당 1회.",
+    "콜? 쫄?",
+    "상대가 다음 턴에 10점 내고 거절하거나 수락! 수락하면 서로 다음 턴 최대 2번 굴려 기본 족보로 승부. 승자 +35, 패자 -10, 동점 각 +10점. 게임당 1회.",
     1,
     "attack",
   ],
@@ -428,10 +428,10 @@ export const FLASH_AUGMENTS: AugmentDefinition[] = [
   },
   {
     id: "handsUp",
-    name: "전원 손 머리 위로",
+    name: "전원 믹서기 입장",
     rarity: "gold",
     description:
-      "나를 포함해 각자의 다음 턴에는 주사위를 2개까지만 보관해요. 그 턴을 마치면 각자 +5점. 게임당 1회.",
+      "나를 포함해 다음 두 번째 일반 굴림에 보관한 주사위도 전부 컵으로! 강제 보관은 제외. 실제로 섞은 뒤 마지막 합이 25 이상이면 +10점. 첫 굴림에 기록하면 회피! 게임당 1회.",
     charges: 1,
     trigger: "active",
     tags: ["attack"],
@@ -450,10 +450,10 @@ export const FLASH_AUGMENTS: AugmentDefinition[] = [
   },
   {
     id: "strike",
-    name: "능력자 총파업",
+    name: "점수표 회전목마",
     rarity: "prism",
     description:
-      "나를 포함해 각자의 다음 턴에는 골드 능력이 전부 멈춰요. 대신 내 다음 일반 굴림은 1회 늘어나요. 게임당 1회.",
+      "하단 칸 하나를 골라요. 그 칸을 쓴 사람들끼리 점수를 무작위 방향으로 한 자리 회전! 나도 포함, 방패는 제외. 이미 점수 교환당한 사람 제외, 게임당 1회.",
     charges: 1,
     trigger: "active",
     tags: ["attack"],
@@ -461,10 +461,10 @@ export const FLASH_AUGMENTS: AugmentDefinition[] = [
   },
   {
     id: "squid",
-    name: "야추판 오징어게임",
+    name: "판돈은 목숨입니다",
     rarity: "prism",
     description:
-      "나를 포함해 각자의 다음 턴은 최대 2번 굴려요. 기본 족보 점수 25점 이상이면 그 칸 점수 2배, 미만이면 절반! 게임당 1회.",
+      "참가자 전원 20점 납부! 다음 턴 최대 2번 굴려 기본 족보 최고점이 판돈 전액+40점을 받아요. 동점은 나눠 갖기. 나 포함 2명 이상·소지 20점 필요. 방패로 거절, 기권 시 환급. 게임당 1회.",
     charges: 1,
     trigger: "active",
     tags: ["gamble"],
@@ -581,7 +581,7 @@ export const NEW_AUGMENTS: AugmentDefinition[] = [
     tags: ["gamble"],
     flash: true,
     description:
-      "나를 포함해 다음 턴 마지막 주사위에 1이 있으면 +3점, 없으면 -2점. 나는 사용 즉시 +3점도 받아요. 게임당 1회.",
+      "전원 강제 회식! 각자 다음 턴에 1 하나당 +2점(최대 +6점), 1이 없으면 회식비 -4점. 나도 적용! 나는 개최비 +3점을 즉시 받아요. 방패로 거절 가능, 게임당 1회.",
   },
   {
     id: "bombParcel",
@@ -592,7 +592,7 @@ export const NEW_AUGMENTS: AugmentDefinition[] = [
     tags: ["attack"],
     flash: true,
     description:
-      "상대는 다음 턴 시작에 내게 6점을 주거나 폭탄을 열어요. 열면 무작위 1~6: 1~3은 내게 10점, 4~6은 오히려 내가 상대에게 6점! 가진 점수까지만, 게임당 1회.",
+      "상대는 다음 턴 내게 10점을 내거나 폭탄을 열어요. 1~3이면 상대가 내게 20점, 4~6이면 역폭발! 내가 상대에게 15점. 가진 점수까지만 이동, 피해 상한 20점 예외. 게임당 1회.",
   },
   {
     id: "hostage",
@@ -645,9 +645,9 @@ const chaosReworks: Record<
     charges: 1,
   },
   construction: {
-    name: "오늘 메뉴는 이겁니다",
+    name: "메뉴판이 살아 있다",
     description:
-      "상대의 빈 점수칸 중 무작위 3개만 다음 턴에 쓸 수 있어요. 빈칸이 4개 이상인 상대만 가능! 게임당 1회.",
+      "상대는 다음 턴에 무작위 빈칸 3개만 기록할 수 있어요. 일반 굴림이 끝날 때마다 메뉴를 다시 추첨! 무료 재굴림은 메뉴 유지. 빈칸 4개 이상인 상대에게 게임당 1회.",
     charges: 1,
   },
   closed: {
@@ -658,7 +658,7 @@ const chaosReworks: Record<
   hostage: {
     name: "악마의 택배",
     description:
-      "상대는 다음 첫 굴림 뒤 내게 10점을 주거나, 주사위 둘을 1로 바꿔야 해요. 바꾼 둘은 그 턴 재굴림도 눈 변경도 불가! 게임당 1회.",
+      "상대는 다음 첫 굴림 뒤 내게 몸값 30점을 주거나, 주사위 세 개를 1로 봉인! 봉인된 셋은 그 턴 재굴림·눈 변경 불가. 몸값은 피해 상한 30점 예외, 방패로 방어 가능. 게임당 1회.",
   },
 };
 for (const d of AUGMENTS)
@@ -752,6 +752,7 @@ export const EVENTS = [
 export const augmentCommandSchema = z.strictObject({
   op: z.enum(["pick", "refresh", "use", "keepOld", "world", "resolve"]),
   id: z.string().max(40).optional(),
+  offerIndex: z.number().int().min(0).max(2).optional(),
   die: z.number().int().min(0).max(9).optional(),
   historyIndex: z.number().int().min(0).max(11).optional(),
   value: z.number().int().min(0).max(9).optional(),
@@ -777,7 +778,8 @@ const instance = z.object({
 export const augmentPlayerSchema = z.object({
   items: z.array(instance),
   offers: z.array(z.string()),
-  refreshed: z.boolean(),
+  rerolled: z.array(z.boolean()).length(3).default([false, false, false]),
+  seenOffers: z.array(z.string()).max(6).default([]),
   flashOffer: z.boolean().default(false),
   bonus: z.number(),
   rawUpper: z.number(),
@@ -805,7 +807,7 @@ export const augmentPlayerSchema = z.object({
       die: z.number().int().min(0).max(9).optional(),
       resolved: z.boolean().optional(),
       other: z.string().optional(),
-      values: z.array(z.number().int().min(1).max(6)).max(2).optional(),
+      values: z.array(z.number().int().min(1).max(6)).max(3).optional(),
       categories: z.array(z.string()).optional(),
     })
     .nullable(),
@@ -832,10 +834,14 @@ export const augmentStateSchema = z.object({
   first: z.number().int(),
   event: z.string().nullable(),
   log: z.array(z.string()),
-  results: z.array(z.object({ key: z.string(), text: z.string() })).default([]),
+  results: z.array(z.object({ key: z.string(), text: z.string(), payouts: z.array(z.object({playerId:z.string(),amount:z.number(),reason:z.string()})).optional(), activation: z.object({
+    id: z.string(), actor: z.string(), targets: z.array(z.string()), name: z.string(), effect: z.string(),
+    kind: z.enum(["attack", "defense", "dice", "swap", "gamble", "score"]),
+    rarity: z.enum(["silver", "gold", "prism"]), flash: z.boolean(),
+  }).optional() })).default([]),
   turn: z.object({
     pending: z
-      .enum(["bombParcel", "hostage", "forkSecond", "forkChoice"])
+      .enum(["bombParcel", "hostage", "forkSecond", "forkChoice", "thief", "duel"])
       .optional(),
     fork: z.object({ start: snapshot, first: snapshot.optional() }).optional(),
     saveIndex: z.number().int().optional(),
@@ -876,8 +882,10 @@ export const augmentStateSchema = z.object({
       aScore: z.number().nullable(),
       bScore: z.number().nullable(),
       after: z.number(),
+      accepted: z.boolean().default(false),
     }),
   ),
+  jackpot: z.object({after: z.number(), entries: z.array(z.object({id: z.string(), score: z.number().nullable()})), pot: z.number()}).optional(),
 });
 export type AugmentState = z.infer<typeof augmentStateSchema>;
 export type AugmentPlayer = z.infer<typeof augmentPlayerSchema>;
@@ -885,7 +893,8 @@ export type AugmentInstance = AugmentPlayer["items"][number];
 export const newAugmentPlayer = (): AugmentPlayer => ({
   items: [],
   offers: [],
-  refreshed: false,
+  rerolled: [false, false, false],
+  seenOffers: [],
   flashOffer: false,
   bonus: 0,
   rawUpper: 0,

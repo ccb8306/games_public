@@ -181,6 +181,33 @@
   min-height: 120px;
   text-align: left;
 }
+.score-breakdown {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: center;
+  gap: 2px 7px;
+  height: 100%;
+  font-size: 0.75rem;
+}
+.score-breakdown > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 3px;
+  white-space: nowrap;
+}
+.score-breakdown b {
+  color: #ffe2a1;
+}
+.score-breakdown > span:nth-child(2) b {
+  color: #a5f1d6;
+}
+.score-breakdown .score-net b {
+  color: #fff;
+}
+.score-confirm.has-breakdown #score-confirm-reason {
+  margin: 0;
+  align-self: stretch;
+}
 
 .score-confirm p {
   color: #c0d6ce;

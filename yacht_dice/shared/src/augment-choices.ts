@@ -14,6 +14,7 @@ export function transfer(
   from: PublicPlayer,
   to: PublicPlayer,
   amount: number,
+  cap = 10,
 ) {
   const key = `damage:${s.augment!.turn.serial}`;
   const paid = Math.max(
@@ -21,7 +22,7 @@ export function transfer(
     Math.min(
       amount,
       playerTotals(from).total,
-      10 - (from.augment!.roundIncome[key] ?? 0),
+      cap - (from.augment!.roundIncome[key] ?? 0),
     ),
   );
   from.augment!.bonus -= paid;
@@ -64,14 +65,32 @@ export function resolveChoice(
     t.pending = undefined;
     return;
   }
-  if (kind === "bombParcel") {
+  if (kind === "thief" || kind === "duel") {
+    const fee=kind==="thief"?5:10;
+    if(c.value===0){
+      if(playerTotals(p).total<fee)throw Error(`${fee}점이 있어야 납부할 수 있어요.`);
+      const paid=transfer(s,p,source,fee);
+      h.result(s,`${p.nickname} → ${source.nickname} ${paid}점 납부 · ${kind==="duel"?"결투 거절":"압류 종료"}`);
+      if(kind==="duel")s.augment!.duels=s.augment!.duels.filter(d=>!(d.a===source.id&&d.b===p.id&&!d.accepted));
+      p.augment!.curse=null;
+    }else{
+      if(kind==="duel"){
+        const d=s.augment!.duels.find(d=>d.a===source.id&&d.b===p.id&&!d.accepted);
+        if(!d)throw Error("수락할 결투가 없어요.");
+        d.accepted=true;t.maxRolls=Math.min(2,t.maxRolls);
+      }
+      curse.resolved=true;
+      h.result(s,`${p.nickname} · ${kind==="duel"?"콜! 결투 수락 — 승리 +35 / 패배 -10":"압류에 도전! 25점 이상이면 -15, 미만이면 상대에게서 최대 +8"}`);
+    }
+  } else if (kind === "bombParcel") {
     const face = c.value === 1 ? random(6) + 1 : null;
     const reverse = face !== null && face >= 4;
     const amount = transfer(
       s,
       reverse ? source : p,
       reverse ? p : source,
-      face === null ? 6 : reverse ? 6 : 10,
+      face === null ? 10 : reverse ? 15 : 20,
+      20,
     );
     h.result(
       s,
@@ -80,25 +99,26 @@ export function resolveChoice(
     p.augment!.curse = null;
   } else if (kind === "hostage") {
     if (c.value === 0) {
-      if (playerTotals(p).total < 10)
-        throw Error("10점이 없으면 주사위 두 개를 봉인해야 해요.");
-      transfer(s, p, source, 10);
+      if (playerTotals(p).total < 30)
+        throw Error("30점이 없으면 주사위 세 개를 봉인해야 해요.");
+      const paid = transfer(s, p, source, 30, 30);
+      h.result(s, `${source.nickname} · 악마의 택배 몸값 +${paid}점 획득 / ${p.nickname} -${paid}점`);
     } else {
       const indices = c.indices ?? [];
       if (
-        indices.length !== 2 ||
-        new Set(indices).size !== 2 ||
-        indices.some((i) => i >= s.dice.length || t.preheld?.includes(i)) ||
-        curse.values?.length !== 2
+        indices.length !== 3 ||
+        new Set(indices).size !== 3 ||
+        indices.some((i) => !Number.isInteger(i) || i < 0 || i >= s.dice.length || t.preheld?.includes(i)) ||
+        curse.values?.length !== 3
       )
-        throw Error("미리 보관한 주사위를 제외하고 두 개를 고르세요.");
+        throw Error("미리 보관한 주사위를 제외하고 세 개를 고르세요.");
       indices.forEach((i) => h.change(s, i, 1));
       t.sealed = [...indices];
       t.fixed = [...indices];
       for (const i of indices) s.held[i] = true;
       t.flags.push("faceChanged");
     }
-    h.result(s, `${p.nickname} · 악마의 택배: ${c.value === 0 ? "10점 납부!" : "주사위 두 개가 이번 턴 내내 1로 봉인!"}`);
+    h.result(s, `${p.nickname} · 악마의 택배: ${c.value === 0 ? "몸값 정산 완료! 주사위를 지켰어요." : "주사위 세 개가 이번 턴 내내 1로 봉인!"}`);
     p.augment!.curse = null;
   }
   t.pending = undefined;
