@@ -12,8 +12,8 @@ test('activation identifies actor, targets, reservation and defense instead of c
 });
 test('global activation names all attempted targets and only reserves unshielded players',()=>{
  const s=fixture(['handsUp'],4);give(s.players[1],['shield']);use(s,'handsUp');
- const a=s.augment.results.at(-1).activation;assert.equal(a.flash,true);assert.deepEqual(a.targets,['P0','P1','P2','P3']);
- assert.match(a.effect,/P0 · P2 · P3의 다음/);assert.match(a.effect,/P1.*공격 무효/);
+ const a=s.augment.results.at(-1).activation;assert.equal(a.flash,true);assert.deepEqual(a.targets,['P1','P2','P3']);
+ assert.match(a.effect,/P2 · P3의 다음/);assert.match(a.effect,/P1.*공격 무효/);
  const x=fixture(['strike'],4);x.players.forEach((p,i)=>p.scores.choice=10+i);give(x.players[1],['shield']);use(x,'strike',{category:'choice'});
  assert.equal(x.augment.results.at(-1).activation.kind,'swap');assert.match(x.augment.results.at(-1).activation.effect,/공격 무효/);
  const b=fixture(['bounty']);use(b,'bounty',{target:b.players[1].id,value:6});assert.match(b.augment.results.at(-1).activation.effect,/수배한 눈: 6/);

@@ -136,7 +136,7 @@ export function useScoreSelection({
   }
 
   let reason = room.augment
-    ? "칸의 숫자는 기록 점수예요. 선택하면 증강 점수도 따로 보여요."
+    ? "기본(증강) 표기 · 괄호의 점수는 상단 63점 조건에서 제외돼요."
     : "기록할 점수를 선택하세요.";
   if (room.phase === "finished") reason = "경기가 종료되었습니다.";
   else if (!connected) reason = "서버에 다시 연결하고 있습니다.";

@@ -183,7 +183,7 @@ test("card reroll is separate from selection, spends only its slot and reports t
       ),
     );
     const cell = document.querySelector('[data-category="choice"] button')!;
-    assert.equal(cell.textContent, "30");
+    assert.equal(cell.textContent, "30(+6)");
     assert.match(
       cell.getAttribute("title")!,
       /기록 30점.*증강·사건 \+6점.*총점 변화 \+36점/,
@@ -196,6 +196,21 @@ test("card reroll is separate from selection, spends only its slot and reports t
       document.querySelector(".score-breakdown")!.textContent!,
       /증강·사건\s*\+6점/,
     );
+    room.dice = [6, 6, 6, 6, 1];
+    await act(async () =>
+      root.render(
+        <ScoreTable
+          room={room}
+          playerId="p0"
+          selected={null}
+          canScore={true}
+          onSelect={() => {}}
+        />,
+      ),
+    );
+    const sixes = document.querySelector('[data-category="sixes"] button')!;
+    assert.equal(sixes.textContent, "24(+6)");
+    assert.match(sixes.getAttribute("title")!, /상단 63점 인정 24점/);
     await act(async () => render());
     room.augment!.log.push("능력 발동!");
     await act(async () => render());

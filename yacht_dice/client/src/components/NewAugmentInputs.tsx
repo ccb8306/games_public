@@ -112,7 +112,7 @@ export function NewAugmentInputs({
       <div className="augment-direct">
         <p>상대의 직전 눈을 고른 뒤 바꿀 내 주사위를 눌러요.</p>
         {id === "misdelivery" && (
-          <p>내 원래 눈은 상대의 다음 첫 굴림에 보관돼요.</p>
+          <p>내 원래 눈은 상대의 다음 턴 끝까지 강제 보관·눈 변경 금지예요.</p>
         )}
         <div className="augment-choice">
           {opponents.flatMap((p) =>
@@ -219,8 +219,8 @@ export function PendingAugmentChoice({
           <>
             <p>
               {kind === "thief"
-                ? "5점을 내면 끝! 도전하면 기본 족보 25점 이상은 상대에게 최대 15점, 미만이면 상대에게서 최대 8점을 받아요."
-                : "10점을 내면 거절! 수락하면 양쪽 다음 턴 최대 2번 굴려요. 승자 +35점, 패자 -10점, 동점 각각 +10점."}
+                ? "지금 5점을 내고 끝내거나, 이번 기본 족보 점수의 25%를 납부해요(올림, 최대 15점). 0점이면 납부도 0점!"
+                : "10점을 내고 거절하면 상대의 다음 굴림도 +1회! 수락하면 양쪽 다음 턴 최대 2번. 승자 +35점, 패자 -10점, 동점 각각 +10점."}
             </p>
             <div className="augment-choice">
               <button disabled={!legal(0)} onClick={() => send(0)}>
@@ -231,7 +231,7 @@ export function PendingAugmentChoice({
                 disabled={!legal(1)}
                 onClick={() => send(1)}
               >
-                {kind === "thief" ? "압류에 도전!" : "콜! 승부하자"}
+                {kind === "thief" ? "이번 기록의 25% 납부" : "콜! 승부하자"}
               </button>
             </div>
           </>
@@ -239,12 +239,12 @@ export function PendingAugmentChoice({
         {kind === "bombParcel" && (
           <>
             <p>
-              보낸 사람에게 10점을 주고 끝내거나, 폭탄을 열어 승부하세요. 열면
-              무작위 숫자 1~6이 나와요. 1~3이면 내가 20점을 주고, 4~6이면 오히려
-              상대에게서 15점을 받아요. 가진 점수까지만 오가요.
+              보낸 사람에게 15점을 주고 끝내거나, 폭탄을 열어 승부하세요. 열면
+              무작위 숫자 1~6이 나와요. 1~4면 내가 25점을 주고, 5~6이면 오히려
+              상대에게서 10점을 받아요. 가진 점수까지만 오가요.
             </p>
             <button disabled={!legal(0)} onClick={() => send(0)}>
-              10점 주고 끝내기
+              15점 주고 끝내기
             </button>
             <button disabled={!legal(1)} onClick={() => send(1)}>
               폭탄 열고 승부하기

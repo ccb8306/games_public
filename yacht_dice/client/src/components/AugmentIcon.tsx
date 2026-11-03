@@ -6,6 +6,10 @@ export function AugmentIcon({ id }: { id: string }) {
   const n = AUGMENTS.findIndex((a) => a.id === id),
     seed = Math.max(0, n);
   const motifs: Record<string, string> = {
+    rollVault:
+      "M18 18h28v30H18ZM23 24h18v10H23ZM27 40h10M32 37v7M24 28h0m8 0h0m8 0h0",
+    scoreRemodel:
+      "M16 19h17v25H16ZM39 19h9v25h-9M22 26h5m-5 7h5M29 50h17m-5-5 5 5-5 5",
     loan: "M18 39l11-11 8 8 12-18M39 18h10v10M18 46h30M21 20h0m8 0h0",
     thief: "M20 17h24v30H20ZM25 25h14M25 31h14M26 39l4 4 9-10",
     duel: "M18 18l28 28m0-28L18 46M15 40l9 9m16-34 9 9M15 24l9-9m16 34 9-9",

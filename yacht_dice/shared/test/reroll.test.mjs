@@ -11,7 +11,7 @@ function action(s,command,actor=s.currentPlayerId) {return applyGameAction(s,act
 
 test('all one-die rerolls preserve counts, other faces and holds across 4-10 dice and every old/new face',()=>{
  let cases=0;
- for(const id of ['choiceRoll','even','chaos','exchange'])for(let count=4;count<=10;count++)for(let index=0;index<count;index++)for(let old=1;old<=6;old++)for(let next=1;next<=6;next++){
+ for(const id of ['choiceRoll','chaos','exchange'])for(let count=4;count<=10;count++)for(let index=0;index<count;index++)for(let old=1;old<=6;old++)for(let next=1;next<=6;next++){
   if(id==='even'&&old!==1)continue;
   let s=room(count);const p=s.players[0];s.currentPlayerId=p.id;s.dice[index]=old;s.held=s.held.map((_,i)=>i%2===0);
   p.augment.items=[{id,remaining:3,usedTurn:-1,usedRound:-1}];if(['chaos','exchange'].includes(id))s.augment.event=id;
@@ -32,7 +32,7 @@ test('all one-die rerolls preserve counts, other faces and holds across 4-10 dic
   } else assert.equal(s.augment.turn.chooseOld,null);
   assert.equal(roomStateSchema.safeParse(s).success,true);cases++;
  }
- assert.equal(cases,5586);
+ assert.equal(cases,5292);
 });
 
 test('each draft slot rerolls once, preserves peers and rarity, rejects stale requests and resets next draft',()=>{

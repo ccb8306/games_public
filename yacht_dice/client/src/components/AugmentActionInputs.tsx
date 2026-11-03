@@ -10,6 +10,9 @@ import {
 } from "@yacht/shared";
 
 export const DIRECT_INPUT_IDS = [
+  "parasite",
+  "lastmove",
+  "scoreRemodel",
   "collector",
   "artisan",
   "fakeHouse",
@@ -67,6 +70,70 @@ export function AugmentActionInputs({
       return false;
     }
   }
+  if (id === "parasite")
+    return (
+      <div className="augment-direct">
+        <p>
+          게임 끝까지 계약할 스폰서를 고르세요. 상대 고득점 +4점, 내가 직전
+          기록을 따라잡으면 +6점!
+        </p>
+        {room.players
+          .filter((q) => q && q.id !== player.id && !q.forfeited)
+          .map((q) => (
+            <button
+              key={q!.id}
+              disabled={!legal({ target: q!.id })}
+              onClick={() => onUse({ target: q!.id })}
+            >
+              {q!.nickname}와 계약
+            </button>
+          ))}
+      </div>
+    );
+  if (id === "even")
+    return (
+      <button
+        className="primary"
+        disabled={!legal({})}
+        onClick={() => onUse({})}
+      >
+        1 전부 반품하기
+      </button>
+    );
+  if (id === "scoreRemodel")
+    return (
+      <div className="augment-direct">
+        <p>
+          다시 열 칸을 고른 뒤, 대신 0점을 쓸 빈칸을 고르세요. 기존 점수는
+          보존됩니다.
+        </p>
+        <select
+          aria-label="다시 열 하단 칸"
+          value={mine}
+          onChange={(e) => setMine(e.target.value)}
+        >
+          <option value="">다시 열 칸 선택</option>
+          {SCORE_CATEGORIES.slice(6)
+            .filter((k) => player.scores[k] !== null)
+            .map((k) => (
+              <option key={k} value={k}>
+                {SCORE_LABELS[k]} · {player.scores[k]}점
+              </option>
+            ))}
+        </select>
+        {SCORE_CATEGORIES.slice(6)
+          .filter((k) => player.scores[k] === null)
+          .map((k) => (
+            <button
+              key={k}
+              disabled={!legal({ category: mine, destination: k })}
+              onClick={() => onUse({ category: mine, destination: k })}
+            >
+              {SCORE_LABELS[k]}에 0점 · 이사 확정
+            </button>
+          ))}
+      </div>
+    );
   if (id === "chance")
     return (
       <div className="augment-direct">
@@ -263,7 +330,16 @@ export function AugmentActionInputs({
         )}
       </div>
     );
-  if (["collector", "choiceRoll", "even", "chaos", "exchange"].includes(id))
+  if (
+    [
+      "lastmove",
+      "collector",
+      "choiceRoll",
+      "even",
+      "chaos",
+      "exchange",
+    ].includes(id)
+  )
     return (
       <div className="augment-direct">
         <p>
@@ -295,7 +371,7 @@ export function AugmentActionInputs({
           disabled={!legal({})}
           onClick={() => onUse({})}
         >
-          0점 칸 없음 · +10점 예약
+          0점 칸 없음 · +20점 예약
         </button>
       );
     return (

@@ -9,6 +9,7 @@ export type AugmentDefinition = {
   charges: number;
   tags: string[];
   flash?: boolean;
+  retired?: boolean;
 };
 const rows: [string, string, string, number, string][] = [
   [
@@ -376,7 +377,7 @@ export const FLASH_AUGMENTS: AugmentDefinition[] = [
     name: "6 나왔죠? 세금입니다",
     rarity: "silver",
     description:
-      "상대의 다음 턴 마지막 주사위에 6이 하나 있을 때마다 그 턴 득점에서 -2점. 최대 -6점, 게임당 2회.",
+      "상대의 다음 턴 마지막 주사위에 6이 하나 있을 때마다 2점씩 내게 세금 납부! 그 턴 득점 안에서 최대 6점을 빼앗아요. 게임당 2회.",
     charges: 2,
     trigger: "active",
     tags: ["attack"],
@@ -387,8 +388,8 @@ export const FLASH_AUGMENTS: AugmentDefinition[] = [
     name: "바나나 껍질",
     rarity: "silver",
     description:
-      "상대의 다음 첫 굴림에서 가장 높은 주사위 하나가 미끄러져 1로 바뀌어요. 같은 눈이면 무작위 하나! 이후 다시 굴릴 수 있어요. 게임당 1회.",
-    charges: 1,
+      "상대의 다음 첫 굴림에서 가장 높은 주사위 하나가 미끄러져 1로 바뀌어요. 같은 눈이면 무작위 하나! 이후 다시 굴릴 수 있어요. 게임당 2회.",
+    charges: 2,
     trigger: "active",
     tags: ["attack"],
     flash: true,
@@ -428,10 +429,10 @@ export const FLASH_AUGMENTS: AugmentDefinition[] = [
   },
   {
     id: "handsUp",
-    name: "전원 믹서기 입장",
+    name: "너희만 믹서기 입장",
     rarity: "gold",
     description:
-      "나를 포함해 다음 두 번째 일반 굴림에 보관한 주사위도 전부 컵으로! 강제 보관은 제외. 실제로 섞은 뒤 마지막 합이 25 이상이면 +10점. 첫 굴림에 기록하면 회피! 게임당 1회.",
+      "나 빼고 상대들만! 다음 두 번째 일반 굴림에 보관한 주사위도 전부 컵으로! 강제 보관 제외. 한 명이라도 방해 예약에 성공하면 나는 즉시 +10점. 첫 굴림 기록으로 회피 가능. 게임당 1회.",
     charges: 1,
     trigger: "active",
     tags: ["attack"],
@@ -453,7 +454,7 @@ export const FLASH_AUGMENTS: AugmentDefinition[] = [
     name: "점수표 회전목마",
     rarity: "prism",
     description:
-      "하단 칸 하나를 골라요. 그 칸을 쓴 사람들끼리 점수를 무작위 방향으로 한 자리 회전! 나도 포함, 방패는 제외. 이미 점수 교환당한 사람 제외, 게임당 1회.",
+      "하단 칸 하나를 골라요. 그 칸을 쓴 사람들끼리 한 자리 회전하되, 양방향 중 내게 더 높은 점수가 오는 방향으로! 나도 포함, 방패와 이미 교환당한 사람 제외. 게임당 1회.",
     charges: 1,
     trigger: "active",
     tags: ["attack"],
@@ -464,7 +465,7 @@ export const FLASH_AUGMENTS: AugmentDefinition[] = [
     name: "판돈은 목숨입니다",
     rarity: "prism",
     description:
-      "참가자 전원 20점 납부! 다음 턴 최대 2번 굴려 기본 족보 최고점이 판돈 전액+40점을 받아요. 동점은 나눠 갖기. 나 포함 2명 이상·소지 20점 필요. 방패로 거절, 기권 시 환급. 게임당 1회.",
+      "참가자 전원 20점 납부! 다음 턴 상대는 최대 2번, 나는 최대 3번 굴려요. 기본 족보 최고점이 판돈 전액+60점 독식! 동점은 분할. 나 포함 2명 이상·소지 20점 필요. 방패로 거절, 기권 시 환급. 게임당 1회.",
     charges: 1,
     trigger: "active",
     tags: ["gamble"],
@@ -581,7 +582,7 @@ export const NEW_AUGMENTS: AugmentDefinition[] = [
     tags: ["gamble"],
     flash: true,
     description:
-      "전원 강제 회식! 각자 다음 턴에 1 하나당 +2점(최대 +6점), 1이 없으면 회식비 -4점. 나도 적용! 나는 개최비 +3점을 즉시 받아요. 방패로 거절 가능, 게임당 1회.",
+      "전원 강제 회식! 각자 다음 턴에 1 하나당 +2점(최대 +6점), 1이 없으면 회식비 -4점. 나도 적용! 나는 개최비 +6점을 즉시 받아요. 방패로 거절 가능, 게임당 1회.",
   },
   {
     id: "bombParcel",
@@ -592,7 +593,7 @@ export const NEW_AUGMENTS: AugmentDefinition[] = [
     tags: ["attack"],
     flash: true,
     description:
-      "상대는 다음 턴 내게 10점을 내거나 폭탄을 열어요. 1~3이면 상대가 내게 20점, 4~6이면 역폭발! 내가 상대에게 15점. 가진 점수까지만 이동, 피해 상한 20점 예외. 게임당 1회.",
+      "상대는 다음 턴 내게 15점을 내거나 폭탄을 열어요. 1~4면 상대가 내게 25점, 5~6이면 역폭발! 내가 상대에게 10점. 가진 점수까지만 이동, 피해 상한 25점 예외. 게임당 1회.",
   },
   {
     id: "hostage",
@@ -622,6 +623,26 @@ const chaosReworks: Record<
   string,
   { name: string; description: string; charges?: number }
 > = {
+  collector: {
+    name: "중복은 못 참지", charges: 4,
+    description: "같은 눈이 둘 이상이면 그중 하나를 무료로 다시 던져요. 새 결과 필수! 턴당 1회·게임당 4회.",
+  },
+  seal: {
+    name: "굴림 봉인", charges: 2,
+    description: "상대의 다음 턴 일반 굴림을 1회 줄여요. 최소 1회는 보장! 게임당 2회.",
+  },
+  target: {
+    name: "목표 명중", charges: 3,
+    description: "첫 굴림 전에 빈 점수칸을 지정하세요. 그 칸에 1점 이상 기록하면 +12점, 다른 칸이나 0점을 기록하면 -6점. 게임당 3회.",
+  },
+  parkingTicket: {
+    name: "거기 주차 금지",
+    description: "상대가 다음 턴에 한 번이라도 주사위를 3개 이상 보관하면 그 턴 득점 -6점. 2개까지만 보관하면 피해요. 게임당 2회.",
+  },
+  defect: {
+    name: "불량품 백화점",
+    description: "하단 족보가 아깝게 실패해도 인정! 같은 눈 3개면 포커, 3+1 또는 두 쌍이면 풀하우스로 합의 80%(내림). 연속 3종은 스몰 12점, 연속 4종은 라지 24점, 같은 눈 4개는 요트 40점. 정상 성공 점수가 우선이에요.",
+  },
   inspection: {
     name: "보관함 털이",
     description:
@@ -636,19 +657,19 @@ const chaosReworks: Record<
   receipt: {
     name: "그거 굴리면 터진다",
     description:
-      "상대의 다음 첫 굴림에 폭탄 주사위 하나! 다시 굴리면 나는 +3점, 안 굴리고 기록하면 상대 득점 -4점. 게임당 2회.",
+      "상대의 다음 첫 굴림에 폭탄 주사위 하나! 다시 굴리면 나는 +5점, 안 굴리고 기록하면 상대 득점 -5점. 게임당 2회.",
   },
   broken: {
     name: "그 버튼 이제 제 겁니다",
     description:
-      "상대의 사용형 골드 하나를 다음 턴 동안 막고 내가 한 번 빌려 써요. 빌린 능력은 내 다음 턴 끝에 사라져요. 상대의 사용 횟수는 그대로! 게임당 1회.",
-    charges: 1,
+      "상대의 사용형 골드 하나를 다음 턴 동안 막고 내가 한 번 빌려 써요. 빌린 능력은 내 다음 턴 끝에 사라져요. 상대의 사용 횟수는 그대로! 게임당 2회.",
+    charges: 2,
   },
   construction: {
     name: "메뉴판이 살아 있다",
     description:
-      "상대는 다음 턴에 무작위 빈칸 3개만 기록할 수 있어요. 일반 굴림이 끝날 때마다 메뉴를 다시 추첨! 무료 재굴림은 메뉴 유지. 빈칸 4개 이상인 상대에게 게임당 1회.",
-    charges: 1,
+      "상대는 다음 턴에 무작위 빈칸 2개만 기록할 수 있어요. 일반 굴림마다 메뉴 재추첨! 무료 재굴림은 유지. 빈칸 3개 이상인 상대에게 게임당 2회.",
+    charges: 2,
   },
   closed: {
     name: "성적표 맞바꿔치기",
@@ -668,23 +689,23 @@ const chaosNew: AugmentDefinition[] = [
     id: "practice",
     name: "방금 건 연습",
     rarity: "silver",
-    charges: 1,
+    charges: 2,
     trigger: "active",
     flash: true,
     tags: ["attack"],
     description:
-      "상대의 다음 첫 굴림에서 가장 높은 주사위 하나를 자동으로 다시 던져요. 새 결과 필수, 일반 굴림 횟수는 그대로! 게임당 1회.",
+      "상대의 다음 첫 굴림에서 가장 높은 주사위 하나를 자동으로 다시 던져요. 새 결과 필수! 재굴림이 성공하면 나는 +4점. 일반 굴림 횟수는 그대로, 게임당 2회.",
   },
   {
     id: "misdelivery",
     name: "택배 오배송",
     rarity: "gold",
-    charges: 1,
+    charges: 2,
     trigger: "active",
     flash: true,
     tags: ["attack", "change"],
     description:
-      "내 주사위 하나를 상대의 지난 결과에 있던 눈으로 바꿔요. 상대는 다음 첫 굴림에 내 원래 눈을 보관하고 시작해요. 이후 보관 해제 가능! 게임당 1회.",
+      "내 주사위 하나를 상대의 지난 결과에 있던 눈으로 바꿔요. 상대에게는 내 원래 눈을 보내 다음 턴 끝까지 강제 보관! 눈 변경도 불가. 게임당 2회.",
   },
   {
     id: "goldRush",
@@ -695,10 +716,43 @@ const chaosNew: AugmentDefinition[] = [
     flash: true,
     tags: ["attack"],
     description:
-      "나를 포함해 각자의 골드 하나씩을 무작위로 뽑아 다음 좌석에게 영구 전달해요. 남은 사용 횟수도 그대로! 방패로 막힌 사람은 제외, 게임당 1회.",
+      "각자의 골드 하나씩을 뽑아 다음 좌석에게 영구 전달! 나는 받은 골드의 사용 횟수를 완충하고 즉시 +20점. 다른 사람은 남은 횟수 그대로. 방패 제외, 나 포함 2명 이상 교환 성공 시. 게임당 1회.",
   },
 ];
 AUGMENTS.push(...chaosNew);
+for (const id of ['wild','worldFlip','doppel','substitute','fork']) AUGMENTS.find(d=>d.id===id)!.retired=true;
+AUGMENTS.push(
+  {id:'rollVault',name:'몰빵 주사위통',rarity:'prism',trigger:'passive',charges:0,tags:['roll'],description:'남은 턴 × 3 + 3회의 굴림을 모아 써요. 한 턴 최대 7회! 다음 턴마다 최소 1회는 남겨요. 일찍 기록하면 남은 굴림이 이월돼요.'},
+  {id:'scoreRemodel',name:'점수판 이사가는 날',rarity:'prism',trigger:'active',charges:1,tags:['score'],description:'첫 굴림 전, 기록한 하단 칸과 빈 하단 칸을 고르세요. 기존 점수는 보너스로 보존하고 원래 칸을 다시 열어요. 대신 빈칸에 0점! 게임당 1회.'},
+);
+const ordinaryUpdates: Record<string, Partial<AugmentDefinition>> = {
+  even:{description:'지금 나온 1을 전부 무료로 다시 던져요. 강제 고정은 제외하고 새 결과는 반드시 사용! 게임당 2회.'},
+  savings:{description:'족보에 3턴 연속 1점 이상 기록하면 +10점! 지급 후 다시 3연속에 도전해요. 최대 3번 지급.'},
+  shield:{description:'첫 방해를 자동으로 막고 +6점! 끝까지 방해를 받지 않으면 마지막 내 턴 종료 시 +8점.'},
+  loser:{description:'턴 시작에 1위보다 25점 이상 뒤처졌다면 일반 굴림 +2회! 게임당 최대 3턴 발동.'},
+  revive:{charges:1,description:'첫 굴림 전에 주사위 2개를 원하는 같은 눈으로 보관해요. 처음 1회 지급, 0점 기록 시 사용권 회복! 보유 최대 1회, 게임당 최대 3회 사용.'},
+  taste:{charges:3,description:'상대의 지난 최종 결과에 있던 숫자를 내 주사위 하나에 복사해요. 굴림이 멈췄을 때 턴당 1회·게임당 3회.'},
+  spectator:{description:'상대가 기본 족보 30점 이상 기록하면 +3점. 라운드 최대 +6점, 게임 전체 최대 +24점.'},
+  parasite:{description:'상대가 기본 족보 25점 이상 기록하면 +5점. 라운드 최대 +10점, 게임 전체 최대 +40점.'},
+  ordinaryDay:{description:'상대의 다음 턴 골드·프리즘 증강을 자동 효과와 번뜩임까지 정지! 실버·사건은 유지해요. 횟수는 소모되지 않아요. 게임당 1회, 방패로 방어 가능.'},
+  erase:{description:'이번 주사위로 예전에 0점을 쓴 칸도 다시 채점해요. 대상이 사라졌으면 대신 +20점 지급! 게임당 1회.'},
+};
+for (const d of AUGMENTS) if(ordinaryUpdates[d.id]) Object.assign(d,ordinaryUpdates[d.id]);
+for(const id of ['flip','taste','inspection','swap']) AUGMENTS.find(d=>d.id===id)!.retired=true;
+const personalityUpdates: Record<string,Partial<AugmentDefinition>>={
+  stubborn:{name:'존버 금고',description:'첫 굴림에서 보관한 주사위 2개 이상을 지킨 채 다시 굴릴 때마다 금고 +3점, 최대 +9점! 기록하면 받아요. 2개 미만으로 남기면 금고가 깨져요.'},
+  clockwork:{name:'브레이크 고장',description:'아무것도 보관하지 않고 전부 다시 굴릴수록 보상이 커져요! 1번 +4, 2번 +10, 3번 이상 +18점. 족보 1점 이상 기록 시 지급, 게임 전체 최대 +36점.'},
+  lastmove:{name:'퇴근 전 한 발',trigger:'active',charges:3,description:'세 번째 일반 굴림 이후 주사위 하나를 무료로 다시 던져요. 새 결과 필수, 이후 재굴림 종료! 게임당 3회.'},
+  bounty:{description:'상대와 수배할 숫자를 고르세요. 상대의 다음 최종 결과에 2개 이상 있으면 나는 +8점! 피하면 상대가 +3점. 공격이 아니므로 방패를 쓰지 않아요. 게임당 2회.'},
+  parasite:{name:'너 내 스폰서 해라',trigger:'active',charges:1,description:'첫 굴림 전에 상대 한 명과 게임 끝까지 계약! 상대가 기본 25점 이상 기록하면 나는 +4점. 내가 상대의 직전 기본 점수(최소 15점)를 따라잡으면 +6점! 합계 최대 +36점.'},
+  thief:{name:'수금하러 왔습니다',description:'상대는 다음 턴 5점을 내고 끝내거나, 그 턴 기본 족보 점수의 25%(올림, 최대 15점)를 내게 줘요. 낮게 기록하면 세금도 적어요. 게임당 2회.'},
+  duel:{description:'상대가 10점 내고 거절하거나 결투! 거절하면 나는 다음 턴 굴림 +1회도 받아요. 수락하면 서로 다음 턴 최대 2회, 승자 +35·패자 -10·동점 각 +10점. 게임당 1회.'},
+  ordinaryDay:{name:'버튼 누르면 내 돈',description:'상대의 다음 턴 골드·프리즘 사용 버튼에 통행료! 발동할 때마다 내게 5점, 최대 15점. 능력은 정상 작동해요. 예약 성공 시 나는 +10점. 방패로 방어 가능, 게임당 1회.'},
+  practice:{description:'상대가 두 번째 일반 굴림을 마치면, 가장 높은 주사위 하나를 다시 던져요! 강제 고정은 제외, 새 결과 필수. 실제 재굴림 성공 시 나는 +4점. 첫 굴림 기록으로 회피 가능, 게임당 2회.'},
+  strike:{description:'3인 이상 전용 난장판! 기록한 하단 한 칸을 참가자끼리 회전해요. 내게 더 높은 점수가 오는 방향으로 회전! 방패·교환당한 사람 제외, 게임당 1회.'},
+  confiscate:{description:'상대마다 다음 턴 주사위 1개를 뺏어 내 다음 턴에 굴려요! 2인전은 실제 압수 성공 시 보너스 주사위도 1개 추가(나는 +2, 상대 -1). 방패로 막힌 건 제외, 게임당 1회.'},
+};
+for(const d of AUGMENTS)if(personalityUpdates[d.id])Object.assign(d,personalityUpdates[d.id]);
 export const EVENTS = [
   {
     id: "reverse",
@@ -759,6 +813,7 @@ export const augmentCommandSchema = z.strictObject({
   target: z.string().max(40).optional(),
   other: z.string().max(40).optional(),
   category: z.string().max(30).optional(),
+  destination: z.string().max(30).optional(),
   indices: z.array(z.number().int().min(0).max(9)).max(10).optional(),
   seals: z
     .array(
@@ -774,6 +829,9 @@ const instance = z.object({
   usedTurn: z.number().int().default(-1),
   usedRound: z.number().int().default(-1),
   borrowedAt: z.number().int().optional(),
+  uses: z.number().int().min(0).optional(),
+  target: z.string().optional(),
+  earned: z.number().min(0).optional(),
 });
 export const augmentPlayerSchema = z.object({
   items: z.array(instance),
@@ -785,6 +843,9 @@ export const augmentPlayerSchema = z.object({
   rawUpper: z.number(),
   streak: z.number(),
   savingsPaid: z.boolean(),
+  progress: z.record(z.string(), z.number()).optional(),
+  rollBank: z.number().optional(),
+  bounties: z.array(z.object({from:z.string(),face:z.number().int().min(1).max(6)})).max(4).optional(),
   previousZero: z.boolean(),
   savedFace: z.number().int().min(1).max(6).nullable().optional(),
   lastDice: z.array(z.number().int().min(1).max(6)).optional(),
@@ -890,6 +951,12 @@ export const augmentStateSchema = z.object({
 export type AugmentState = z.infer<typeof augmentStateSchema>;
 export type AugmentPlayer = z.infer<typeof augmentPlayerSchema>;
 export type AugmentInstance = AugmentPlayer["items"][number];
+export function canTradeGold(item: AugmentInstance) {
+  const def=AUGMENTS.find(d=>d.id===item.id);
+  return item.borrowedAt===undefined && def?.rarity==='gold' &&
+    (def.charges<=0 || item.remaining>0 || ['artisan','fakeHouse'].includes(item.id) ||
+      item.id==='parasite' && !!item.target && (item.earned??0)<36);
+}
 export const newAugmentPlayer = (): AugmentPlayer => ({
   items: [],
   offers: [],

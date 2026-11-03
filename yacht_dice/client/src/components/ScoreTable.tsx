@@ -12,7 +12,7 @@ import {
   type ScoreCategory,
 } from "@yacht/shared";
 import { SCORE_LABELS } from "../scoreLabels";
-import { describeScore } from "../scoreBreakdown";
+import { describeScore, compactScore } from "../scoreBreakdown";
 import type { Qualification, RecordedScore } from "../feedback/qualifications";
 type Props = {
   room: RoomState;
@@ -106,7 +106,9 @@ export function ScoreTable({
               }
             >
               {room.augment
-                ? (previews[category]?.recorded ?? "—")
+                ? previews[category]
+                  ? compactScore(previews[category]!)
+                  : "—"
                 : categoryScore(category, dice)}
             </button>
           ) : p?.id === room.currentPlayerId &&
@@ -131,7 +133,12 @@ export function ScoreTable({
         <table data-players={players.length}>
           <thead>
             <tr>
-              <th scope="col">족보</th>
+              <th scope="col">
+                족보
+                {room.augment && (
+                  <small className="score-format-key">기본(증강)</small>
+                )}
+              </th>
               {players.map((p, i) => (
                 <th
                   scope="col"

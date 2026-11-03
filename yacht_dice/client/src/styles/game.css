@@ -369,6 +369,16 @@ tbody th {
   background: #4a5134;
   color: #ffdf9d;
 }
+.score-format-key {
+  display: block;
+  font-size: 0.65rem;
+  color: #b9dfcd;
+}
+.score-panel:has(.score-format-key) .preview-score {
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 
 .subtotal {
   background: #1c3833;

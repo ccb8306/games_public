@@ -61,9 +61,9 @@ try{
  room.state.augment.event='exchange';room.state.augment.turn.locked=0;room.state.players[slot].augment.curse={id:'lock',from:room.state.players[(slot+1)%4].id};
  const crowded=await actor.evaluate(()=>({dice:Math.max(...[...document.querySelectorAll('.die')].map(e=>e.getBoundingClientRect().bottom)),tray:document.querySelector('.dice-tray').getBoundingClientRect().bottom}));console.log(JSON.stringify(crowded));assert.ok(crowded.dice<=crowded.tray);await actor.screenshot({path:'artifacts/augments/event-and-curse.png',fullPage:true});
  await pages[1].reload();await pages[1].locator('.augment-hand').waitFor();assert.equal(await pages[1].locator('.die').count(),6);
- await actor.getByRole('button',{name:'능력 도감'}).click();assert.equal(await actor.locator('.augment-catalog > button.augment-card').count(),74);await actor.screenshot({path:'artifacts/augments/catalog.png',fullPage:true});
+ await actor.getByRole('button',{name:'능력 도감'}).click();assert.equal(await actor.locator('.augment-catalog > button.augment-card').count(),AUGMENTS.filter(d=>!d.retired).length);await actor.screenshot({path:'artifacts/augments/catalog.png',fullPage:true});
  assert.equal(await actor.locator('.augment-event-catalog article').count(),8);
- const expectedCatalog=AUGMENTS.toSorted((a,b)=>['silver','gold','prism'].indexOf(a.rarity)-['silver','gold','prism'].indexOf(b.rarity)||a.name.localeCompare(b.name,'ko'));
+ const expectedCatalog=AUGMENTS.filter(d=>!d.retired).toSorted((a,b)=>['silver','gold','prism'].indexOf(a.rarity)-['silver','gold','prism'].indexOf(b.rarity)||a.name.localeCompare(b.name,'ko'));
  const checkCatalog=async cards=>assert.deepEqual(await actor.locator('.augment-catalog > button strong').allTextContents(),cards.map(d=>(d.flash?'\u2726 \uBC88\uB729\uC784 \u00b7 ':'')+d.name));
  await checkCatalog(expectedCatalog);
  await actor.locator('.augment-catalog-tools input').fill(AUGMENTS.find(d=>d.id==='goldRush').name);assert.equal(await actor.locator('.augment-catalog > button').count(),1);
@@ -91,7 +91,7 @@ try{
  room.state.dice=[6,6,6,6,6];room.state.held=Array(5).fill(false);room.state.motion=null;room.state.rollCount=1;room.state.rollPhase='idle';app.rooms.broadcast(room);await actor.waitForTimeout(250);
  for(const width of [1366,390]){
   await actor.setViewportSize({width,height:768});const cell=actor.locator('[data-category="choice"] button');await cell.click();
-  assert.equal(await cell.innerText(),'30');assert.ok((await actor.locator('.score-breakdown').innerText()).includes('+6'));assert.ok((await actor.locator('.score-breakdown').innerText()).includes('+36'));
+  assert.equal(await cell.innerText(),'30(+6)');assert.ok((await actor.locator('.score-breakdown').innerText()).includes('+6'));assert.ok((await actor.locator('.score-breakdown').innerText()).includes('+36'));
   assert.ok((await actor.locator('.score-confirm button').innerText()).includes('30'));
   assert.ok(await actor.locator('.score-breakdown').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
   assert.ok(await actor.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
@@ -235,11 +235,11 @@ try{
  room.state.dice=[1,2,3,4,5];room.state.held=Array(5).fill(false);room.state.motion=null;room.state.rollCount=1;room.state.rollPhase='idle';
  Object.assign(room.state.augment.turn,{erase:'bonus',parallel:null,flags:[],pending:undefined,reroll:null,oldWorld:null,chooseOld:null,fork:undefined});
  recordAugment(room.state,paid,'choice');const checked=roomStateSchema.safeParse(room.state);assert.ok(checked.success,JSON.stringify(checked.error));app.rooms.broadcast(room);
- await actor.waitForFunction(()=>document.querySelector('.augment-result-burst')?.textContent.includes('+10'));
+ await actor.waitForFunction(()=>document.querySelector('.augment-result-burst')?.textContent.includes('+20'));
  await actor.locator('.augment-receipts summary').click();
- assert.ok((await actor.locator('.augment-receipts').innerText()).includes('+10'));
+ assert.ok((await actor.locator('.augment-receipts').innerText()).includes('+20'));
  await actor.screenshot({path:'artifacts/augments/payout-receipt.png',fullPage:true});
  await actor.reload();await actor.locator('.augment-receipts').waitFor();assert.equal(await actor.locator('.augment-result-burst').count(),0);
- await actor.locator('.augment-receipts summary').click();assert.ok((await actor.locator('.augment-receipts').innerText()).includes('+10'));
- assert.deepEqual(errors,[]);await writeFile('artifacts/augments/browser.json',JSON.stringify({clients:4,modeSelection:true,draft:true,sixDice:true,clone:true,allDiceScoring:true,reconnect:true,catalog:74,bombMarkers:true,sealedMarkers:true,payoutReceipt:true,errors},null,2));console.log('Augment browser checks passed');
+ await actor.locator('.augment-receipts summary').click();assert.ok((await actor.locator('.augment-receipts').innerText()).includes('+20'));
+ assert.deepEqual(errors,[]);await writeFile('artifacts/augments/browser.json',JSON.stringify({clients:4,modeSelection:true,draft:true,sixDice:true,clone:true,allDiceScoring:true,reconnect:true,catalog:AUGMENTS.filter(d=>!d.retired).length,bombMarkers:true,sealedMarkers:true,payoutReceipt:true,errors},null,2));console.log('Augment browser checks passed');
 }finally{await browser?.close();await app.close();}

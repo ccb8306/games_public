@@ -30,7 +30,7 @@ for(const [round,rarity] of [[1,'silver'],[4,'gold'],[7,'gold'],[10,'prism']]){
   }
  }
  for(const seat of seats){
-  const eligible=AUGMENTS.filter(d=>!d.flash&&d.rarity===rarity&&d.id!=='evolution'&&(round===1||d.id!=='fourth'));
+  const eligible=AUGMENTS.filter(d=>!d.retired&&!d.flash&&!["erase","scoreRemodel"].includes(d.id)&&d.rarity===rarity&&d.id!=='evolution'&&(round===1||d.id!=='fourth'));
   assert.deepEqual(Object.keys(seat.positions[0]).sort(),eligible.map(d=>d.id).sort(),'every eligible card must appear in every seat');
   assert.ok(Math.abs(seat.flash/samples-.1)<.025,'flash rate must be near 10% for each seat');
   for(const position of seat.positions){

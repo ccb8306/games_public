@@ -47,9 +47,9 @@ function argumentsFor(id,p){
  const open=SCORE_CATEGORIES.filter(k=>p.scores[k]===null),zero=SCORE_CATEGORIES.filter(k=>p.scores[k]===0);
  const indices=s.dice.map((_,i)=>i),die=random(indices.length),value=random(6)+1;
  const their=q.augment.items.filter(i=>AUGMENTS.find(d=>d.id===i.id).rarity==='gold'),mine=p.augment.items.filter(i=>AUGMENTS.find(d=>d.id===i.id).rarity==='gold');
- return {die:id==='even'?s.dice.indexOf(1):die,value:id==='clone'?random(indices.length):['taste','misdelivery'].includes(id)?(q.augment.lastDice?.[0]??value):value,target:q.id,
+ return {destination:SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]===null),die:id==='even'?s.dice.indexOf(1):die,value:id==='clone'?random(indices.length):['taste','misdelivery'].includes(id)?(q.augment.lastDice?.[0]??value):value,target:q.id,
   historyIndex:p.augment.archive?.length?random(p.augment.archive.length):0,
-  category:id==='strike'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&s.players.some(q=>q.id!==p.id&&q.scores[k]!==null&&!q.augment.scoreSwapped)):id==='closed'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&q.scores[k]!==null&&p.scores[k]!==q.scores[k]):id==='swap'?mine[0]?.id:id==='erase'?zero[0]:open[random(open.length)],other:their[0]?.id,
+  category:id==='scoreRemodel'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null):id==='strike'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&s.players.some(q=>q.id!==p.id&&q.scores[k]!==null&&!q.augment.scoreSwapped)):id==='closed'?SCORE_CATEGORIES.slice(6).find(k=>p.scores[k]!==null&&q.scores[k]!==null&&p.scores[k]!==q.scores[k]):id==='swap'?mine[0]?.id:id==='erase'?zero[0]:open[random(open.length)],other:their[0]?.id,
   indices:indices.slice(0,id==='worldFlip'?1+random(indices.length):2),
   seals:SCORE_CATEGORIES.filter(k=>q.scores[k]===null).slice(0,2).map(category=>({target:q.id,category}))};
 }
@@ -117,5 +117,5 @@ for(let game=0;game<games;game++){
  scores.push(...s.players.map(p=>playerTotals(p).total));
  if((game+1)%100===0)console.log(JSON.stringify({games:game+1,turns,actions}));
 }
-const report={games,initialSeed,turns,actions,rejections,refreshes,meanScore:scores.reduce((a,b)=>a+b,0)/scores.length,min:Math.min(...scores),max:Math.max(...scores),uses,picks,pending,events,diceCounts,rerolls,unusedActiveCards:AUGMENTS.filter(d=>d.trigger==='active'&&!uses[d.id]).map(d=>d.id),method:'Seeded random legal actions and synthetic uniform dice; validates engine completion and state invariants, not physical probabilities or human win-rate balance.'};
+const report={games,initialSeed,turns,actions,rejections,refreshes,meanScore:scores.reduce((a,b)=>a+b,0)/scores.length,min:Math.min(...scores),max:Math.max(...scores),uses,picks,pending,events,diceCounts,rerolls,unusedActiveCards:AUGMENTS.filter(d=>!d.retired&&d.trigger==='active'&&!uses[d.id]).map(d=>d.id),method:'Seeded random legal actions and synthetic uniform dice; validates engine completion and state invariants, not physical probabilities or human win-rate balance.'};
 await mkdir('artifacts/augments',{recursive:true});await writeFile(`artifacts/augments/extended-stress-${initialSeed}.json`,JSON.stringify(report,null,2));console.log(JSON.stringify(report));

@@ -71,6 +71,7 @@ export function resolveChoice(
       if(playerTotals(p).total<fee)throw Error(`${fee}점이 있어야 납부할 수 있어요.`);
       const paid=transfer(s,p,source,fee);
       h.result(s,`${p.nickname} → ${source.nickname} ${paid}점 납부 · ${kind==="duel"?"결투 거절":"압류 종료"}`);
+      if(kind==="duel"){source.augment!.progress??={};source.augment!.progress.duelRoll=1;}
       if(kind==="duel")s.augment!.duels=s.augment!.duels.filter(d=>!(d.a===source.id&&d.b===p.id&&!d.accepted));
       p.augment!.curse=null;
     }else{
@@ -80,17 +81,17 @@ export function resolveChoice(
         d.accepted=true;t.maxRolls=Math.min(2,t.maxRolls);
       }
       curse.resolved=true;
-      h.result(s,`${p.nickname} · ${kind==="duel"?"콜! 결투 수락 — 승리 +35 / 패배 -10":"압류에 도전! 25점 이상이면 -15, 미만이면 상대에게서 최대 +8"}`);
+      h.result(s,`${p.nickname} · ${kind==="duel"?"콜! 결투 수락 — 승리 +35 / 패배 -10":"수금 계약: 이번 기본 족보의 25% 납부 (올림, 최대 15점)"}`);
     }
   } else if (kind === "bombParcel") {
     const face = c.value === 1 ? random(6) + 1 : null;
-    const reverse = face !== null && face >= 4;
+    const reverse = face !== null && face >= 5;
     const amount = transfer(
       s,
       reverse ? source : p,
       reverse ? p : source,
-      face === null ? 10 : reverse ? 15 : 20,
-      20,
+      face === null ? 15 : reverse ? 10 : 25,
+      25,
     );
     h.result(
       s,

@@ -1,6 +1,6 @@
 import type { ScoreCategory, ScoreBreakdown } from "@yacht/shared";
 import { SCORE_LABELS } from "../scoreLabels";
-import { describeScore, signedScore } from "../scoreBreakdown";
+import { describeScore, signedScore, augmentDelta } from "../scoreBreakdown";
 
 type Props = {
   selected: ScoreCategory | null;
@@ -28,10 +28,10 @@ export function ScoreConfirmation({
             aria-label={describeScore(breakdown)}
           >
             <span>
-              점수판 <b>{breakdown.recorded}점</b>
+              기본 <b>{breakdown.base}점</b>
             </span>
             <span>
-              증강·사건 <b>{signedScore(breakdown.augment)}</b>
+              증강·사건 <b>{signedScore(augmentDelta(breakdown))}</b>
             </span>
             {!!breakdown.otherRecords && (
               <span>

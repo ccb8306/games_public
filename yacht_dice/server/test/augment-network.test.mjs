@@ -21,7 +21,7 @@ test('offer refresh and every single-die reroll synchronize, survive reconnect a
   room.state.players.find(p=>p.id===actor.session.playerId).augment.items=[{id,remaining:2,usedTurn:-1,usedRound:-1}];room.state.augment.event=['chaos','exchange'].includes(id)?id:null;
   app.rooms.broadcast(room);await actor.until(()=>actor.state.revision===room.state.revision);
   await actor.command('augment',{command:{op:'use',id,die:index}});await peer.until(()=>peer.state.rollPhase==='shaking');
-  assert.deepEqual(actor.state.held,Array.from({length:count},(_,i)=>i!==index));
+  assert.deepEqual(actor.state.held,Array.from({length:count},(_,i)=>id==="even"?faces[i]!==1:i!==index));
   if(count===4&&id==='even'){
    const job=room.physicsJob,remaining=actor.state.players.find(p=>p.id===actor.session.playerId).augment.items[0].remaining;
    app.rooms.physics.send({type:'cancel',roomId:room.state.roomId,id:job.id});
@@ -32,7 +32,7 @@ test('offer refresh and every single-die reroll synchronize, survive reconnect a
   const token=actor.session;actor.ws.close();await peer.until(()=>peer.state.players.some(p=>!p.connected));actor=await connect(url);actor.send('resumeRoom',{code:token.code,token:token.token});await actor.until(()=>actor.state?.players.every(p=>!p||p.connected));
   assert.equal(actor.state.augment.turn.reroll.id,id);
   await actor.command('roll');await actor.until(()=>actor.state.rollPhase==='idle'&&!actor.state.augment.turn.reroll,30000);await peer.until(()=>peer.state.revision===actor.state.revision);
-  assert.equal(actor.state.rollCount,3);assert.deepEqual(actor.state.held,held);assert.deepEqual(actor.state.dice.filter((_,i)=>i!==index),faces.filter((_,i)=>i!==index));assert.deepEqual(actor.state.motion,peer.state.motion);
+  assert.equal(actor.state.rollCount,3);assert.deepEqual(actor.state.held,held);assert.deepEqual(actor.state.dice.filter((_,i)=>id==="even"?faces[i]!==1:i!==index),faces.filter((_,i)=>id==="even"?faces[i]!==1:i!==index));assert.deepEqual(actor.state.motion,peer.state.motion);
   if(actor.state.augment.turn.chooseOld){await actor.command('augment',{command:{op:'keepOld',value:1}});assert.deepEqual(actor.state.dice,faces);}
   assert.equal(actor.state.augment.turn.extra,id==='exchange'?8:0);assert.equal(actor.state.augment.turn.flags.includes('final'),id==='chaos');
  }

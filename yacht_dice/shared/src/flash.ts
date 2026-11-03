@@ -1,4 +1,4 @@
-import { AUGMENTS, type AugmentCommand } from "./augments.js";
+import { AUGMENTS, canTradeGold, type AugmentCommand } from "./augments.js";
 import {
   SCORE_CATEGORIES,
   type PublicPlayer,
@@ -16,9 +16,7 @@ export function goldDisabled(p: PublicPlayer, id: string) {
   const curse = p.augment?.curse;
   return (
     !!curse?.active &&
-    ((curse.id === "ordinaryDay" &&
-      AUGMENTS.find((d) => d.id === id)?.trigger === "active") ||
-      (curse.id === "broken" && curse.other === id))
+    (curse.id === "broken" && curse.other === id)
   );
 }
 export function blockedCategory(p: PublicPlayer, category: string) {
@@ -32,7 +30,13 @@ export function flashTargets(s: RoomState, p: PublicPlayer, c: AugmentCommand) {
     alive = s.players.filter((q): q is PublicPlayer => !!q && !q.forfeited);
   const opponent = (target?: string) =>
     alive.find((q) => q.id === target && q.id !== p.id && remaining(q).length);
+  if (id === "handsUp") {
+    const targets=alive.filter(q=>q.id!==p.id&&remaining(q).length&&!q.augment!.curse);
+    if(!targets.length) throw Error("방해를 예약할 상대가 없어요.");
+    return targets.map(q=>({q,categories:undefined,other:undefined}));
+  }
   if (id === "strike") {
+    if(alive.length<3)throw Error("회전목마는 3인 이상에서 사용할 수 있어요.");
     const key = c.category as (typeof SCORE_CATEGORIES)[number];
     if (!SCORE_CATEGORIES.slice(6).includes(key)) throw Error("회전할 하단 칸을 고르세요.");
     const eligible = alive.filter((q) => q.scores[key] !== null && !q.augment!.scoreSwapped);
@@ -80,18 +84,7 @@ export function flashTargets(s: RoomState, p: PublicPlayer, c: AugmentCommand) {
     return [{ q, categories: [key], other: undefined }];
   }
   if (id === "goldRush") {
-    const eligible = alive.filter((q) =>
-      q.augment!.items.some(
-        (i) =>
-          i.borrowedAt === undefined &&
-          AUGMENTS.some(
-            (d) =>
-              d.id === i.id &&
-              d.rarity === "gold" &&
-              (d.charges <= 0 || i.remaining > 0),
-          ),
-      ),
-    );
+    const eligible = alive.filter((q) => q.augment!.items.some(canTradeGold));
     if (eligible.length < 2 || !eligible.some((q) => q.id === p.id))
       throw Error("나를 포함한 두 명 이상이 사용 가능한 골드를 갖고 있어야 해요.");
     return eligible
@@ -102,8 +95,8 @@ export function flashTargets(s: RoomState, p: PublicPlayer, c: AugmentCommand) {
   if (!q || q.augment!.curse)
     throw Error("남은 턴이 있고 방해가 예약되지 않은 상대를 고르세요.");
   let categories: string[] | undefined;
-  if (id === "construction" && remaining(q).length <= 3)
-    throw Error("빈 점수칸이 4개 이상인 상대에게만 사용할 수 있어요.");
+  if (id === "construction" && remaining(q).length <= 2)
+    throw Error("빈 점수칸이 3개 이상인 상대에게만 사용할 수 있어요.");
   if (id === "misdelivery" && !q.augment!.lastDice?.includes(c.value ?? 0))
     throw Error("상대가 직전에 기록한 주사위 눈을 고르세요.");
   if (

@@ -59,6 +59,20 @@ function Card({
               ? "골드"
               : "프리즘"}
         </small>
+        {def.flash && (
+          <small className="augment-rarity">
+            {{
+              closed: "상대 점수표를 내 것으로!",
+              strike: "점수판 전체 회전!",
+              confiscate: "남의 주사위를 내 컵으로!",
+              hostage: "몸값이냐, 주사위 3개 봉인이냐!",
+              goldRush: "골드 셔플 + 내 카드 완충!",
+              squid: "판돈과 보너스를 한 명이 독식!",
+              handsUp: "남들만 전부 다시 섞어!",
+              bombParcel: "안전한 납부냐, 역폭발 도박이냐!",
+            }[def.id] ?? "상대의 다음 선택을 흔들어 보세요"}
+          </small>
+        )}
         <small>{detail ?? def.description}</small>
         {action && (
           <span className="augment-card-action">
@@ -182,6 +196,7 @@ export function AugmentPanel({
     eventDef = EVENTS.find((e) => e.id === selected);
   const catalogCards = AUGMENTS.filter(
     (d) =>
+      !d.retired &&
       (catalogFilter === "all" ||
         (catalogFilter === "flash" ? d.flash : !d.flash)) &&
       (catalogRarity === "all" || d.rarity === catalogRarity) &&
@@ -219,6 +234,8 @@ export function AugmentPanel({
     "revive",
   ];
   const before = [
+    "parasite",
+    "scoreRemodel",
     "memory",
     "target",
     "loan",
@@ -244,8 +261,7 @@ export function AugmentPanel({
     if (goldDisabled(p!, id)) return false;
     if (d?.flash || MISCHIEF_IDS.includes(id))
       return usable && room.rollPhase === "idle";
-    if (before.includes(id))
-      return room.rollCount === 0 && (id !== "revive" || ap!.previousZero);
+    if (before.includes(id)) return room.rollCount === 0;
     if (["swap", "doppel", "thief", "lock", "seal", "duel"].includes(id))
       return true;
     if (id === "fork")
@@ -272,6 +288,8 @@ export function AugmentPanel({
         !t.flags.includes("final")
       );
     if (id === "exchange" && room.rollCount < 2) return false;
+    if (id === "lastmove" && (room.rollCount < 3 || t.flags.includes("final")))
+      return false;
     if (
       t.flags.includes("wild") &&
       dieAbilities.concat("worldFlip").includes(id)
@@ -338,7 +356,39 @@ export function AugmentPanel({
           document.body,
         )}
       <div className="augment-status">
+        {ap?.rollBank !== undefined && !myTurn && (
+          <span>몰빵 잔고 {ap.rollBank}회 · 다음 내 턴에 사용</span>
+        )}
+        {ap?.rollBank !== undefined && myTurn && (
+          <span>
+            몰빵 잔고 {Math.max(0, ap.rollBank - room.rollCount)}회 · 이번 턴{" "}
+            {Math.max(0, t.maxRolls - room.rollCount)}회 가능 · 이후 턴{" "}
+            {Math.max(
+              0,
+              11 - Object.values(p.scores).filter((n) => n !== null).length,
+            )}
+            회 예약
+            {Math.max(
+              0,
+              ap.rollBank -
+                room.rollCount -
+                (Math.max(0, t.maxRolls - room.rollCount) +
+                  Math.max(
+                    0,
+                    11 -
+                      Object.values(p.scores).filter((n) => n !== null).length,
+                  ) *
+                    7),
+            ) > 0 && <b> · 이대로면 일부 잔고가 남아 소멸해요</b>}
+          </span>
+        )}
         <strong>✦ 증강 · {a.round}/12 라운드</strong>
+        {ap?.bounties?.map((b) => (
+          <span key={b.from} className="augment-curse">
+            {room.players.find((q) => q?.id === b.from)?.nickname}의 수배: 내
+            다음 결과에 {b.face}가 2개 이상이면 상대 +8점, 피하면 나 +3점
+          </span>
+        ))}
         <button onClick={() => setLibrary(true)}>능력 도감</button>
         {usable && t.oldWorld && (
           <button onClick={() => open("world")}>두 세계 비교</button>
@@ -384,6 +434,7 @@ export function AugmentPanel({
                         <Card
                           key={id}
                           def={AUGMENTS.find((d) => d.id === id)!}
+                          detail={`${AUGMENTS.find((d) => d.id === id)!.description} · 남은 ${12 - Object.values(p.scores).filter((n) => n !== null).length}턴${id === "hunter" ? ` · 포커/요트 ${["fourOfAKind", "yacht"].filter((k) => p.scores[k as ScoreCategory] === null).length}칸` : id === "defect" ? ` · 적용 가능한 하단 ${SCORE_CATEGORIES.slice(7).filter((k) => p.scores[k] === null).length}칸` : ""}`}
                           disabled={disabled}
                           action="이 증강 선택"
                           onClick={() => onCommand({ op: "pick", id })}
@@ -501,7 +552,7 @@ export function AugmentPanel({
               <small>
                 {duel.accepted
                   ? "승부 성립! 각자 최대 2번 · 승자 +35 / 패자 -10 / 동점 각각 +10점"
-                  : "상대 응답 대기 · 10점 내고 거절하거나 승부 수락"}
+                  : "상대 응답 대기 · 거절하면 내게 10점과 다음 턴 굴림 +1회"}
               </small>
             </article>
           ))}
@@ -514,7 +565,7 @@ export function AugmentPanel({
           aria-live="polite"
         >
           <small>판돈은 목숨입니다 · 20점씩 납부 완료</small>
-          <strong>우승 지급액 {a.jackpot.pot + 40}점</strong>
+          <strong>우승 지급액 {a.jackpot.pot + 60}점</strong>
           {a.jackpot.entries.map((e) => (
             <p key={e.id}>
               {room.players.find((q) => q?.id === e.id)?.nickname}{" "}
@@ -524,7 +575,7 @@ export function AugmentPanel({
             </p>
           ))}
           <small>
-            일반 굴림 최대 2회 · 기본 족보 최고점 우승 · 동점은 나눠 갖기
+            시전자 최대 3회 · 상대 최대 2회 · 기본 족보 최고점 우승 · 동점 분할
           </small>
         </section>
       )}
@@ -586,7 +637,7 @@ export function AugmentPanel({
         <p className="augment-use-hint" role="status">
           ⏳ 점수 확정 시 적용 · 아직 지급 전<br />
           {t.erase === "bonus"
-            ? "지워진 0: 대체 보너스 +10점 예약"
+            ? "지워진 0: 대체 보너스 +20점 예약"
             : t.erase
               ? "지워진 0: 기존 0점 칸 재채점 예약"
               : ""}
@@ -612,21 +663,41 @@ export function AugmentPanel({
               }
               onClick={() => open(item.id)}
               detail={
-                item.borrowedAt !== undefined
-                  ? `대여 · ${item.remaining}회 남음 · 다음 내 턴 끝에 반납`
-                  : goldDisabled(p, item.id)
-                    ? "이번 턴 사용 중지 · 종료 후 복구"
-                    : d.trigger === "passive"
-                      ? "자동 발동 · 눌러 설명"
-                      : item.remaining === 0
-                        ? ["artisan", "fakeHouse"].includes(item.id)
-                          ? "조작 완료 · 자동 효과 유지"
-                          : "모두 사용했어요"
-                        : item.usedTurn === t.serial
-                          ? `이번 턴 사용 완료${item.remaining > 0 ? ` · ${item.remaining}회 남음` : ""}`
-                          : item.remaining > 0
-                            ? `${item.remaining}회 남음`
-                            : "턴당 1회"
+                item.id === "revive"
+                  ? `보유 ${item.remaining}회 · 이 카드 ${item.uses ?? 0}/3회 사용`
+                  : item.id === "savings"
+                    ? `현재 ${Math.min(3, ap.streak)}/3연속 · ${ap.progress?.savings ?? 0}/3회 지급`
+                    : item.id === "loser"
+                      ? `이 카드 ${item.uses ?? 0}/3턴 발동`
+                      : item.id === "parasite" && item.target
+                        ? `${room.players.find((q) => q?.id === item.target)?.nickname ?? "나간 플레이어"}와 계약 · 누적 +${item.earned ?? 0}/36점`
+                        : item.id === "stubborn"
+                          ? myTurn
+                            ? `보관 유지 ${t.kept.length}개 · 금고 ${t.kept.length >= 2 ? Math.min(9, Math.max(0, room.rollCount - 1) * 3) : 0}점`
+                            : "다음 내 턴에 금고를 채워요"
+                          : item.id === "clockwork"
+                            ? `${myTurn ? `이번 올인 ${t.flags.filter((f) => f.startsWith("allInRoll:")).length}회 · ` : ""}누적 +${ap.progress?.clockwork ?? 0}/36점`
+                            : item.borrowedAt !== undefined
+                              ? `대여 · ${item.remaining}회 남음 · 다음 내 턴 끝에 반납`
+                              : goldDisabled(p, item.id)
+                                ? "이번 턴 사용 중지 · 종료 후 복구"
+                                : d.trigger === "passive"
+                                  ? ["savings", "loser"].includes(item.id)
+                                    ? `${ap.progress?.[item.id] ?? 0}/3회 발동 · 자동 적용`
+                                    : ["spectator", "parasite"].includes(
+                                          item.id,
+                                        )
+                                      ? `누적 +${ap.progress?.[item.id] ?? 0}/${item.id === "spectator" ? 24 : 40}점`
+                                      : "자동 발동 · 눌러 설명"
+                                  : item.remaining === 0
+                                    ? ["artisan", "fakeHouse"].includes(item.id)
+                                      ? "조작 완료 · 자동 효과 유지"
+                                      : "모두 사용했어요"
+                                    : item.usedTurn === t.serial
+                                      ? `이번 턴 사용 완료${item.remaining > 0 ? ` · ${item.remaining}회 남음` : ""}`
+                                      : item.remaining > 0
+                                        ? `${item.remaining}회 남음`
+                                        : "턴당 1회"
               }
             />
           );

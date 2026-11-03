@@ -46,7 +46,7 @@ function play(card,seed,enabled){
    s.dice=s.dice.map((n,i)=>s.held[i]?n:face(seed,turn,roll,i));s.rollCount=roll;afterAugmentRoll(s,()=>0);
    const fav=[1,2,3,4,5,6].sort((a,b)=>s.dice.filter(n=>n===b).length-s.dice.filter(n=>n===a).length)[0];
    const straight=seed%4===1,seen=new Set();let held=0;
-   s.held=s.dice.map((n,i)=>{const take=i===s.augment.turn.locked||(straight?!seen.has(n):n===fav);seen.add(n);if(take&&p.augment.curse?.id==='handsUp'&&held>=2)return false;if(take)held++;return take;});
+   s.held=s.dice.map((n,i)=>{const take=i===s.augment.turn.locked||(straight?!seen.has(n):n===fav);seen.add(n);if(take)held++;return take;});
    if(roll===1)s.augment.turn.kept=s.held.flatMap((v,i)=>v?[i]:[]);else s.augment.turn.kept=s.augment.turn.kept.filter(i=>s.held[i]);
    if(seed%4===2&&roll===1&&Math.max(...empty().map(k=>augmentedScore(s,p,k).total))>=20)break;
   }
