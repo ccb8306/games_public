@@ -20,6 +20,13 @@ try{
   await p.waitForTimeout(950);await p.screenshot({path:`artifacts/rework/draft-${i}.png`});
   assert.ok(await p.locator('.augment-dialog').evaluate(el=>el.scrollWidth<=el.clientWidth+1));
  }
+ const inspection=pages[1];const beforeOffers=[...room.state.players[1].augment.offers];
+ assert.equal(await inspection.locator('.draft-overlay').evaluate(el=>getComputedStyle(el).backdropFilter),'none');
+ await inspection.getByRole('button',{name:'점수판·내 증강 보기',exact:true}).click();
+ await inspection.locator('.draft-overlay').waitFor({state:'hidden'});assert.equal(await inspection.evaluate(()=>document.body.style.overflow),'');
+ await inspection.screenshot({path:'artifacts/rework/draft-board-inspection.png'});
+ await inspection.getByRole('button',{name:'증강 선택으로 돌아가기',exact:true}).click();await inspection.locator('.draft-overlay').waitFor();assert.deepEqual(room.state.players[1].augment.offers,beforeOffers);
+ for(const page of pages)for(const copy of await page.locator('.augment-offers .augment-card small').all())assert.ok(await copy.evaluate(el=>el.scrollHeight<=el.clientHeight+1&&el.scrollWidth<=el.clientWidth+1));
  const normal=room.state.players[0].augment.offers.slice(0,3);
  await pages[0].locator('.augment-reroll').nth(3).click();await pages[0].waitForTimeout(150);
  assert.deepEqual(room.state.players[0].augment.offers.slice(0,3),normal);
@@ -53,6 +60,18 @@ try{
   await actor.screenshot({path:`artifacts/rework/hand-${width}.png`});await actor.locator('.augment-close').click();assert.ok(Math.abs(scroll-await panel.evaluate(el=>el.scrollTop))<2);
   assert.ok(await actor.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
  }
+ // Reading duration and controls must remain usable on the narrowest viewport.
+ for(const page of pages)await page.reload();
+ await pages[1].waitForTimeout(500);
+ const push=(key,text)=>{room.state.augment.results.push({key,text});room.state.revision++;app.rooms.broadcast(room);};
+ push('reading-test','번뜩임 테스트: 공격자 → 피해자 · 폭탄 설치 +6점 지급 완료');
+ const toast=pages[1].locator('.augment-result-burst');await toast.waitFor();
+ await pages[1].waitForTimeout(1600);assert.ok(await toast.isVisible());
+ await toast.getByRole('button',{name:'고정',exact:true}).click();await pages[1].mouse.move(0,0);
+ await pages[1].waitForTimeout(8500);assert.ok(await toast.isVisible());
+ await pages[1].screenshot({path:'artifacts/rework/reading-pinned-mobile.png'});
+ await toast.getByRole('button',{name:'지급 알림 닫기'}).click();await toast.waitFor({state:'hidden'});
+ await pages[1].reload();await pages[1].waitForTimeout(500);assert.equal(await pages[1].locator('.augment-result-burst').count(),0);
  assert.deepEqual(errors,[]);assert.ok(roomStateSchema.safeParse(room.state).success);
  await writeFile('artifacts/rework/browser.json',JSON.stringify({peers:4,viewports:[1366,780,390],fourthSlotReroll:true,finalTurnParallel:true,score:'30(+40)',factory:true,reconnect:true,handScroll:true,errors},null,2));console.log('Rework browser checks passed');
 }finally{await browser?.close();await app.close();}

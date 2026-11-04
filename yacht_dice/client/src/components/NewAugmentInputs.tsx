@@ -273,12 +273,12 @@ export function PendingAugmentChoice({
         {kind === "bombParcel" && (
           <>
             <p>
-              보낸 사람에게 15점을 주고 끝내거나, 폭탄을 열어 승부하세요. 열면
-              무작위 숫자 1~6이 나와요. 1~4면 내가 25점을 주고, 5~6이면 오히려
+              보낸 사람에게 18점을 주고 끝내거나, 폭탄을 열어 승부하세요. 열면
+              무작위 숫자 1~6이 나와요. 1~4면 내가 30점을 주고, 5~6이면 오히려
               상대에게서 10점을 받아요. 가진 점수까지만 오가요.
             </p>
             <button disabled={!legal(0)} onClick={() => send(0)}>
-              15점 주고 끝내기
+              18점 주고 끝내기
             </button>
             <button disabled={!legal(1)} onClick={() => send(1)}>
               폭탄 열고 승부하기

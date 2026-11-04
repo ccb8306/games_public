@@ -43,11 +43,11 @@ test('defect supports near misses but preserves normal results and stronger hous
   const s = fixture(['defect']);
   const p = s.players[0];
   for (const [dice, category, score] of [
-    [[6,6,6,2,1],'fourOfAKind',16],
-    [[6,6,2,2,1],'fullHouse',13],
-    [[6,6,6,2,1],'fullHouse',16],
-    [[1,2,3,6,6],'smallStraight',12],
-    [[1,2,3,4,6],'largeStraight',24],
+    [[6,6,6,2,1],'fourOfAKind',21],
+    [[6,6,2,2,1],'fullHouse',17],
+    [[6,6,6,2,1],'fullHouse',21],
+    [[1,2,3,6,6],'smallStraight',15],
+    [[1,2,3,4,6],'largeStraight',30],
     [[6,6,6,6,1],'yacht',40],
     [[1,2,3,4,5],'largeStraight',30],
     [[6,6,6,6,6],'yacht',50],

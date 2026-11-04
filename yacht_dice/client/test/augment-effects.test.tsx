@@ -116,11 +116,11 @@ test("effect queue preserves order, deduplicates snapshots, bounds bursts, skips
 });
 test("effects have bounded timings and reduced motion never adds delay", () => {
   const e = event("1");
-  assert.equal(effectDuration(e), 1300);
-  assert.equal(effectDuration(e, true), 350);
-  assert.equal(effectDuration(e, false, 5), 850);
+  assert.equal(effectDuration(e), 6000);
+  assert.equal(effectDuration(e, true), 6000);
+  assert.equal(effectDuration(e, false, 5), 6000);
   e.presentation!.level = "small";
-  assert.equal(effectDuration(e), 500);
+  assert.equal(effectDuration(e), 3000);
   e.presentation!.level = "emphasis";
-  assert.equal(effectDuration(e), 850);
+  assert.equal(effectDuration(e), 4500);
 });

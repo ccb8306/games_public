@@ -23,12 +23,12 @@ test('monster splits every physical face, guards scoring and preserves normal di
  }
  assert.equal(D12.vertices.length,20);assert.equal(D12.faces.length,12);assert.ok(D12.faces.every(f=>f.indices.length===5));
 });
-test('estate rewards 8 then 24 and a failed plot cannot be resurrected by rewriting zero',()=>{
+test('estate rewards 6 then 10 then 24 and a failed plot cannot be resurrected by rewriting zero',()=>{
  for(const fail of [false,true]){
   const s=fixture(['estate']);s.augment.drafting=true;use(s,'estate',{categories:['ones','twos','threes']});
   for(const [k,dice] of [['ones',fail?[2,2,2,2,2]:[1,1,1,1,1]],['twos',[2,2,2,2,2]],['threes',[3,3,3,3,3]]]){roll(s,dice);const before=playerTotals(s.players[0]).total,preview=scoreBreakdown(s,s.players[0],k);recordAugment(s,s.players[0],k);assert.equal(playerTotals(s.players[0]).total-before,preview.total);}
-  assert.equal(s.players[0].augment.bonus,fail?8:32);
-  s.players[0].scores.ones=null;roll(s,[1,1,1,1,1]);recordAugment(s,s.players[0],'ones');assert.equal(s.players[0].augment.bonus,fail?8:32);
+  assert.equal(s.players[0].augment.bonus,fail?16:40);
+  s.players[0].scores.ones=null;roll(s,[1,1,1,1,1]);recordAugment(s,s.players[0],'ones');assert.equal(s.players[0].augment.bonus,fail?16:40);
  }
 });
 test('custody passes the final face into the next first throw and expires after two turns each',()=>{
@@ -41,7 +41,7 @@ test('custody passes the final face into the next first throw and expires after 
  const blocked=fixture(['custody']);give(blocked.players[1],['shield']);use(blocked,'custody',{target:blocked.players[1].id});assert.equal(blocked.augment.custody,undefined);
 });
 test('crown gives equal attempts, progressive thresholds, one final payment, and preview includes payment',()=>{
- const s=fixture(['crown']);use(s,'crown');assert.equal(s.players[0].augment.bonus,10);
+ const s=fixture(['crown']);use(s,'crown');assert.equal(s.players[0].augment.bonus,15);
  const scenarios=[[s.players[0],'choice',[5,5,5,5,5]],[s.players[1],'choice',[6,6,6,6,6]],[s.players[0],'yacht',[6,6,6,6,6]],[s.players[1],'yacht',[5,5,5,5,5]]];
  for(const [p,key,dice] of scenarios){s.currentPlayerId=p.id;roll(s,dice);const before=playerTotals(p).total,preview=scoreBreakdown(s,p,key);recordAugment(s,p,key);assert.equal(playerTotals(p).total-before,preview.total);}
  assert.equal(s.augment.crown.finished,true);assert.equal(s.augment.crown.holder,s.players[0].id);assert.equal(s.players[1].augment.bonus,0);

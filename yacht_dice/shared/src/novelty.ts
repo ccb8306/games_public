@@ -4,7 +4,7 @@ export const turnsLeft=(p:PublicPlayer)=>Object.values(p.scores).filter(v=>v===n
 export function estateReward(p:PublicPlayer,c:ScoreCategory,base:number){
  const e=p.augment?.estate;if(!e||!e.plots.includes(c)||base<=0||e.completed.includes(c)||e.ruined.includes(c))return 0;
  const successes=e.completed.length+1;
- return Math.max(0,(successes===3?32:successes===2?8:0)-e.paid);
+ return Math.max(0,(successes===3?40:successes===2?16:6)-e.paid);
 }
 export function novelStart(s:RoomState,p:PublicPlayer){
  const link=s.augment!.custody?.find(l=>(l.a===p.id&&l.aLeft>0)||(l.b===p.id&&l.bLeft>0));
@@ -12,12 +12,12 @@ export function novelStart(s:RoomState,p:PublicPlayer){
 }
 export function novelRecord(s:RoomState,p:PublicPlayer,c:ScoreCategory,base:number,result:(text:string)=>void){
  const a=s.augment!,e=p.augment!.estate;
- if(e&&e.plots.includes(c)&&!e.completed.includes(c)&&!e.ruined.includes(c)){(base>0&&(p.scores[c]??0)>0?e.completed:e.ruined).push(c);const n=e.completed.length;e.paid=Math.max(e.paid,n===3?32:n===2?8:0);}
+ if(e&&e.plots.includes(c)&&!e.completed.includes(c)&&!e.ruined.includes(c)){(base>0&&(p.scores[c]??0)>0?e.completed:e.ruined).push(c);const n=e.completed.length;e.paid=Math.max(e.paid,n===3?40:n===2?16:n===1?6:0);}
  for(const link of a.custody??[]){
   const key=link.a===p.id?'aLeft':link.b===p.id?'bLeft':null;
   if(key&&link[key]>0){
    const face=s.dice[a.turn.childIndex??-1];
-   if(face!==null&&face!==undefined){const recipient=s.players.find(q=>q?.id===(face>=4?p.id:link.a===p.id?link.b:link.a));if(recipient){const paidKey=recipient.id===link.a?'aPaid':'bPaid';const paid=Math.min(6,18-(link[paidKey]??0));link[paidKey]=(link[paidKey]??0)+paid;recipient.augment!.bonus+=paid;result(`${recipient.nickname} · 공동 육아 ${face}: +${paid}점 지급 완료`);}}
+   if(face!==null&&face!==undefined){const recipient=s.players.find(q=>q?.id===(face>=4?p.id:link.a===p.id?link.b:link.a));if(recipient){const paidKey=recipient.id===link.a?'aPaid':'bPaid';const paid=Math.min(6,18-(link[paidKey]??0));link[paidKey]=(link[paidKey]??0)+paid;recipient.augment!.bonus+=paid;if(recipient.id===link.a&&paid>0){const ap=recipient.augment!;ap.progress??={};const extra=Math.min(3,9-(ap.progress.custodyExtra??0));ap.progress.custodyExtra=(ap.progress.custodyExtra??0)+extra;ap.bonus+=extra;result(`${recipient.nickname} · 육아 추가 보상 +${extra}점`);}result(`${recipient.nickname} · 공동 육아 ${face}: +${paid}점 지급 완료`);}}
 link[key]--;const i=a.turn.childIndex;if(i!==undefined)link.face=s.dice[i]??null;result(`${p.nickname} · 공동 주사위 ${link.face} 전달! 남은 육아 ${link.aLeft}/${link.bLeft}턴`);}
  }
  a.custody=a.custody?.filter(l=>l.aLeft>0||l.bLeft>0);
@@ -30,7 +30,7 @@ link[key]--;const i=a.turn.childIndex;if(i!==undefined)link.face=s.dice[i]??null
  }
  crown.entries=crown.entries.filter(e=>s.players.some(q=>q?.id===e.id&&!q.forfeited));
  if(crown.entries.every(e=>e.left===0)){
-  crown.finished=true;const winner=s.players.find(q=>q?.id===crown.holder&&!q.forfeited);
+  crown.finished=true;const host=s.players.find(q=>q&&q.id===crown.host&&!q.forfeited);if(host&&host.id!==crown.holder){host.augment!.bonus+=15;result(`${host.nickname} · 왕관 진행비 +15점`);}const winner=s.players.find(q=>q?.id===crown.holder&&!q.forfeited);
   if(winner){winner.augment!.bonus+=40;result(`${winner.nickname} · 왕관 최종 우승! 보너스 +40점 지급 완료`);}
   else result('왕관 보유자 기권 · 우승 보상 없이 종료');
  }

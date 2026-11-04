@@ -307,7 +307,7 @@ export function reconcileAugment(s: RoomState, random: Random) {
   if (!a || s.phase !== "playing") return;
   a.custody=a.custody?.filter(l=>alive(s).some(p=>p.id===l.a)&&alive(s).some(p=>p.id===l.b));
   for(const p of alive(s))if(p.augment!.curse?.id==='custody'&&!a.custody?.some(l=>l.a===p.id||l.b===p.id))p.augment!.curse=null;
-  if(a.crown&&!a.crown.finished){a.crown.entries=a.crown.entries.filter(e=>alive(s).some(p=>p.id===e.id));if(!alive(s).some(p=>p.id===a.crown!.holder)){a.crown.holder='';a.crown.claimed=false;a.crown.threshold=25;}if(a.crown.entries.every(e=>e.left===0)){a.crown.finished=true;const holder=alive(s).find(p=>p.id===a.crown!.holder);if(holder){holder.augment!.bonus+=40;effectResult(s,`${holder.nickname} · 왕관 최종 우승 +40점 지급 완료`);}}}
+  if(a.crown&&!a.crown.finished){a.crown.entries=a.crown.entries.filter(e=>alive(s).some(p=>p.id===e.id));if(!alive(s).some(p=>p.id===a.crown!.holder)){a.crown.holder='';a.crown.claimed=false;a.crown.threshold=25;}if(a.crown.entries.every(e=>e.left===0)){a.crown.finished=true;const host=alive(s).find(q=>q.id===a.crown!.host);if(host&&host.id!==a.crown.holder){host.augment!.bonus+=15;effectResult(s,`${host.nickname} · 왕관 진행비 +15점`);}const holder=alive(s).find(p=>p.id===a.crown!.holder);if(holder){holder.augment!.bonus+=40;effectResult(s,`${holder.nickname} · 왕관 최종 우승 +40점 지급 완료`);}}}
   for (const p of s.players)
     if (p?.forfeited && p.augment) p.augment.curse = null;
   for(const p of alive(s))for(const item of p.augment!.items){
@@ -399,11 +399,11 @@ export function augmentedScore(
       result.longest = Math.max(result.longest, result.current);
       return result;
     }, { current: 0, longest: 0 }).longest;
-    if (c === "fourOfAKind" && counts.some(n => n >= 3)) base = Math.floor(sum * 0.8);
+    if (c === "fourOfAKind" && counts.some(n => n >= 3)) base = sum;
     if (c === "fullHouse" && (counts.filter(n => n >= 2).length >= 2 ||
-      (counts.some(n => n >= 3) && counts.filter(n => n > 0).length >= 2))) base = Math.floor(sum * 0.8);
-    if (c === "smallStraight" && longest >= 3) base = 12;
-    if (c === "largeStraight" && longest >= 4) base = 24;
+      (counts.some(n => n >= 3) && counts.filter(n => n > 0).length >= 2))) base = sum;
+    if (c === "smallStraight" && longest >= 3) base = 15;
+    if (c === "largeStraight" && longest >= 4) base = 30;
   }
   if (
     c === "fullHouse" &&
@@ -449,22 +449,23 @@ export function augmentedScore(
     if (counts[0]! >= 2) add("cleaner", 6 * has("cleaner"));
     if (new Set(dice).size >= 5) add("artisan", 5 * has("artisan"));
     add("rest", Math.max(0, 3 - s.rollCount) * 3 * has("rest"));
-    if (t.kept.length >= 2) add("stubborn", Math.min(9,Math.max(0,s.rollCount-1)*3) * has("stubborn"));
+    if (t.kept.length >= 2) add("stubborn", Math.min(12,Math.max(0,s.rollCount-1)*4) * has("stubborn"));
     if (dice.filter((n) => n % 2).length >= 4) add("odd", 6 * has("odd"));
     if(score>0 && t.flags.includes("allIn")) add("clockwork",Math.min(Math.max(0,36-(p.augment!.progress?.clockwork??0)),[0,4,10,18][Math.min(3,t.flags.filter(f=>f.startsWith("allInRoll:")).length)]??0)*has("clockwork"));
     const upper = SCORE_CATEGORIES.indexOf(c);
-    if (score>0 && upper < 6 && counts[upper]! >= 3) add("upper", (4 + (!p.augment!.progress?.[`upper:${c}`]&&Object.keys(p.augment!.progress??{}).filter(k=>k.startsWith("upper:")).length===2 ? 12 : 0)) * has("upper"));
-    if (score === 0 && (p.augment!.progress?.lower??0)<3) add("lower", 8 * has("lower"));
+    if (score>0 && upper < 6 && counts[upper]! >= 2) add("upper", (4 + (!p.augment!.progress?.[`upper:${c}`]&&Object.keys(p.augment!.progress??{}).filter(k=>k.startsWith("upper:")).length===2 ? 12 : 0)) * has("upper"));
+    if (score === 0 && (p.augment!.progress?.lower??0)<3) add("lower", 10 * has("lower"));
     const kind=Math.max(...counts);
-    if(has("hunter"))for(const item of p.augment!.items.filter(i=>i.id==="hunter"))add("hunter",Math.min(Math.max(0,36-(item.earned??0)),kind>=5?12:kind===4?8:kind===3?4:0));
-    add("erase",Math.min(Math.max(0,45-(p.augment!.progress?.erase??0)),Math.max(0,20-score))*has("erase"));
-    if (score > 0 && p.augment!.streak >= 2 && (p.augment!.progress?.savings??0)<2)
-      add("savings", 18 * has("savings"));
-    if(has("parasite"))for(const contract of p.augment!.items.filter(i=>i.id==="parasite"&&i.target)){const sponsor=alive(s).find(q=>q.id===contract.target);const previous=sponsor?.augment?.progress?.lastBase??0;if(sponsor&&base>=Math.max(10,previous))add("parasite",Math.min(5,Math.max(0,40-(contract.earned??0))));}
+    if(has("hunter"))for(const item of p.augment!.items.filter(i=>i.id==="hunter"))add("hunter",Math.min(Math.max(0,54-(item.earned??0)),kind>=5?18:kind===4?12:kind===3?6:0));
+    if(has("defect")&&raw>0&&SCORE_CATEGORIES.indexOf(c)>=7)add("defect",10*has("defect"));
+    add("erase",Math.min(Math.max(0,60-(p.augment!.progress?.erase??0)),Math.max(0,25-score))*has("erase"));
+    if (score > 0 && (p.augment!.progress?.savings??0)<2)
+      add("savings", Math.min(Math.max(0,36-(p.augment!.progress?.savingsPaid??0)),[3,5,10][Math.min(2,p.augment!.streak)]!) * has("savings"));
+    if(has("parasite"))for(const contract of p.augment!.items.filter(i=>i.id==="parasite"&&i.target)){const sponsor=alive(s).find(q=>q.id===contract.target);const previous=sponsor?.augment?.progress?.lastBase??0;if(sponsor&&base>=Math.max(10,previous))add("parasite",Math.min(6,Math.max(0,48-(contract.earned??0))));}
     if (counts[5]! >= 3) add("six", 7 * has("six"));
     if (t.flags.includes("lastPlace")) add("underdog", Math.min(4,Math.max(0,20-(p.augment!.progress?.underdog??0))) * has("underdog"));
     if (t.target) add("target", t.target === c && score > 0 ? 12 : -6);
-    if (t.flags.includes("loan")) add("loan", (base >= 25 ? 20 : -10) * (t.flags.includes("loanDouble") ? 2 : 1));
+    if (t.flags.includes("loan")) add("loan", (base >= 25 ? 30 : -10) * (t.flags.includes("loanDouble") ? 2 : 1));
     if (t.flags.includes("bomb")) add("bomb", counts[5]! >= 3 ? 20 : -8);
     if (a.event === "speed" && score > 0) add("speed", 10);
 
@@ -584,17 +585,18 @@ function recordAugmentCore(s: RoomState, p: PublicPlayer, c: ScoreCategory) {
   ap.progress.lastBase=r.base;
   novelRecord(s,p,c,r.base,text=>effectResult(s,text));
   if(countAugment(p,"clockwork")&&r.score>0&&t.flags.includes("allIn"))ap.progress.clockwork=Math.min(36,(ap.progress.clockwork??0)+([0,4,10,18][Math.min(3,t.flags.filter(f=>f.startsWith("allInRoll:")).length)]??0));
-  if(countAugment(p,"parasite"))for(const contract of ap.items.filter(i=>i.id==="parasite"&&i.target)){const sponsor=alive(s).find(q=>q.id===contract.target);const previous=sponsor?.augment?.progress?.lastBase??0;if(sponsor&&r.base>=Math.max(10,previous))contract.earned=Math.min(40,(contract.earned??0)+5);}
+  if(countAugment(p,"parasite"))for(const contract of ap.items.filter(i=>i.id==="parasite"&&i.target)){const sponsor=alive(s).find(q=>q.id===contract.target);const previous=sponsor?.augment?.progress?.lastBase??0;if(sponsor&&r.base>=Math.max(10,previous))contract.earned=Math.min(48,(contract.earned??0)+6);}
+  if(r.awards.savings)ap.progress.savingsPaid=(ap.progress.savingsPaid??0)+r.awards.savings;
   if (ap.streak >= 3 && countAugment(p,"savings") && (ap.progress.savings??0)<2) {ap.progress.savings=(ap.progress.savings??0)+1;ap.streak=0;}
   for(const id of ["hunter","erase","underdog"])ap.progress[id]=(ap.progress[id]??0)+(r.awards[id]??0);
-  if(countAugment(p,"hunter")){const kind=Math.max(...[1,2,3,4,5,6].map(n=>s.dice.filter(v=>v===n).length));for(const item of ap.items.filter(i=>i.id==="hunter"))item.earned=Math.min(36,(item.earned??0)+(kind>=5?12:kind===4?8:kind===3?4:0));}
+  if(countAugment(p,"hunter")){const kind=Math.max(...[1,2,3,4,5,6].map(n=>s.dice.filter(v=>v===n).length));for(const item of ap.items.filter(i=>i.id==="hunter"))item.earned=Math.min(54,(item.earned??0)+(kind>=5?18:kind===4?12:kind===3?6:0));}
   if(r.score===0&&countAugment(p,"lower")&&(ap.progress.lower??0)<3)ap.progress.lower=(ap.progress.lower??0)+1;
   if(r.awards.upper)ap.progress[`upper:${c}`]=1;
   ap.progress.cleanerVoucher=0;
   if(countAugment(p,"cleaner")&&s.dice.filter(n=>n===1).length>=2&&filled(p)<12&&(ap.progress.cleanerCreated??0)<2&&!ap.progress.cleanerVoucher){ap.progress.cleanerVoucher=1;ap.progress.cleanerCreated=(ap.progress.cleanerCreated??0)+1;}
   if(ap.rollBank!==undefined){ap.rollBank=Math.max(0,ap.rollBank-Number(t.flags.find(f=>f.startsWith("catStart:"))?.split(":")[1]??s.rollCount));if(filled(p)===12){const paid=Math.min(12,ap.rollBank*2);ap.bonus+=paid;effectResult(s,`${p.nickname} · 남은 굴림 ${ap.rollBank}회 환전 +${paid}점 지급 완료`);ap.rollBank=0;}}
   if(r.score===0&&!goldDisabled(p,"revive"))for(const revive of ap.items.filter(i=>i.id==="revive"&&(i.uses??0)<3))revive.remaining=1;
-  if(filled(p)===12) {const shield=ap.items.find(i=>i.id==="shield"&&i.remaining>0);if(shield){shield.remaining=0;ap.bonus+=8;effectResult(s,`${p.nickname} · 방패 미사용 보상 +8점 지급`);}}
+  if(filled(p)===12) {const shield=ap.items.find(i=>i.id==="shield"&&i.remaining>0);if(shield){shield.remaining=0;ap.bonus+=20;effectResult(s,`${p.nickname} · 방패 미사용 보상 +20점 지급`);}}
   ap.previousZero = r.score === 0;
   if (t.parallel) {
     const parallel = Math.min(40,
@@ -621,8 +623,10 @@ function recordAugmentCore(s: RoomState, p: PublicPlayer, c: ScoreCategory) {
     }
     note(s, `${p.nickname} · 방해 피해 -${damage}`);
   }
-  for(const bounty of ap.bounties??[]){const source=alive(s).find(q=>q.id===bounty.from);if(!source)continue;const hit=s.dice.filter(n=>n===bounty.face).length>=2;const recipient=hit?source:p;recipient.augment!.bonus+=hit?8:3;effectResult(s,`${recipient.nickname} · ${bounty.face} 수배 ${hit?'성공':'회피'}! +${hit?8:3}점 지급 완료`);}ap.bounties=[];
-  if(ap.curse?.active&&ap.curse.id==="practice"&&!ap.curse.resolved&&s.rollCount===1){const source=alive(s).find(q=>q.id===ap.curse!.from);if(source){source.augment!.bonus+=3;effectResult(s,`${source.nickname} · 첫 굴림 회피 보상 +3점 지급 완료`);}}
+  if(ap.curse?.active&&ap.curse.id==="taxSix"&&damage<3){const source=alive(s).find(q=>q.id===ap.curse!.from);if(source){source.augment!.bonus+=3-damage;effectResult(s,`${source.nickname} · 세금 최소 보상 +${3-damage}점`);}}
+  if(filled(p)===12&&countAugment(p,"reflect")&&!ap.progress.reflectPaid){ap.bonus+=20;ap.progress.reflectPaid=20;effectResult(s,`${p.nickname} · 반사 방패 미사용 보상 +20점`);}
+  for(const bounty of ap.bounties??[]){const source=alive(s).find(q=>q.id===bounty.from);if(!source)continue;const hit=s.dice.filter(n=>n===bounty.face).length>=2;const recipient=hit?source:p;recipient.augment!.bonus+=hit?12:3;effectResult(s,`${recipient.nickname} · ${bounty.face} 수배 ${hit?'성공':'회피'}! +${hit?12:3}점 지급 완료`);if(!hit){source.augment!.bonus+=3;effectResult(s,`${source.nickname} · 수배 정보료 +3점`);}}ap.bounties=[];
+  if(ap.curse?.active&&ap.curse.id==="practice"&&!ap.curse.resolved&&s.rollCount===1){const source=alive(s).find(q=>q.id===ap.curse!.from);if(source){source.augment!.bonus+=5;effectResult(s,`${source.nickname} · 첫 굴림 회피 보상 +5점 지급 완료`);}}
   for(const id of Object.keys(r.awards))chargeTariff(s,p,id);
   for(const id of ["fakeHouse","defect"])if(countAugment(p,id)&&r.base>r.raw)chargeTariff(s,p,id);
   if (ap.curse?.active !== false) {
@@ -634,15 +638,15 @@ function recordAugmentCore(s: RoomState, p: PublicPlayer, c: ScoreCategory) {
     ap.curse = null;
   }
   for (const q of alive(s).filter((q) => q.id !== p.id)) {
-    if(r.base>=20&&countAugment(q,"parasite"))for(const contract of q.augment!.items.filter(i=>i.id==="parasite"&&i.target===p.id)){const amount=Math.min(5,Math.max(0,40-(contract.earned??0)));contract.earned=(contract.earned??0)+amount;q.augment!.bonus+=amount;if(amount)chargeTariff(s,q,"parasite");if(amount)effectResult(s,`${q.nickname} \u00b7 ${AUGMENTS.find(d=>d.id==="parasite")!.name} +${amount}`);}
+    if(r.base>=20&&countAugment(q,"parasite"))for(const contract of q.augment!.items.filter(i=>i.id==="parasite"&&i.target===p.id)){const amount=Math.min(6,Math.max(0,48-(contract.earned??0)));contract.earned=(contract.earned??0)+amount;q.augment!.bonus+=amount;if(amount)chargeTariff(s,q,"parasite");if(amount)effectResult(s,`${q.nickname} \u00b7 ${AUGMENTS.find(d=>d.id==="parasite")!.name} +${amount}`);}
     for (const [id, threshold, points, cap] of [
-      ["spectator", 20, 4, 4],
+      ["spectator", 20, 5, 5],
 
     ] as const) {
       if (r.base < threshold) continue;
       const qa = q.augment!,
         earned = qa.roundIncome[id] ?? 0,
-        amount = Math.max(0,Math.min(cap - earned, points * countAugment(q, id), 28-(qa.progress?.[id]??0)));
+        amount = Math.max(0,Math.min(cap - earned, points * countAugment(q, id), 30-(qa.progress?.[id]??0)));
       qa.progress ??= {};qa.progress[id]=(qa.progress[id]??0)+amount;
       qa.bonus += amount;
       if (amount > 0) effectResult(s, `${q.nickname} · ${AUGMENTS.find((d) => d.id === id)!.name}: ${p.nickname}의 고득점으로 +${amount}점 지급 완료`);
@@ -766,8 +770,8 @@ function attack(s: RoomState, p: PublicPlayer, q: PublicPlayer): boolean {
     );
   if (shield) {
     shield.remaining--;
-    ap.bonus+=6;
-    effectResult(s,`${q.nickname} · 방패 방어 보상 +6점 지급`);
+    ap.bonus+=15;
+    effectResult(s,`${q.nickname} · 방패 방어 보상 +15점 지급`);
     note(s, `${q.nickname} · 소형 방패로 방어!`);
     effectResult(s, `${q.nickname} · 소형 방패로 공격 무효!`);
     return false;
@@ -775,6 +779,7 @@ function attack(s: RoomState, p: PublicPlayer, q: PublicPlayer): boolean {
   if (reflect) {
     chargeTariff(s,q,"reflect");
     reflect.usedRound = s.augment!.round;
+    ap.progress??={};const reward=Math.min(6,24-(ap.progress.reflectPaid??0));ap.progress.reflectPaid=(ap.progress.reflectPaid??0)+reward;ap.bonus+=reward;effectResult(s,`${q.nickname} · 반격 보상 +${reward}점`);
     const used =
         p.augment!.roundIncome[`damage:${s.augment!.turn.serial}`] ?? 0,
       damage = Math.min(5, 10 - used, playerTotals(p).total);
@@ -959,13 +964,13 @@ function executeAugment(
     if(!s.rollCount||t.oldWorld)throw Error('괴물을 굴린 뒤 분열하세요.');
     const i=t.monster.index,n=s.dice[i];if(n===null)throw Error('먼저 괴물을 굴리세요.');
     if(c.value===undefined||!Number.isInteger(c.value)||c.value<1||c.value>6)throw Error('분열할 첫 번째 눈은 1~6이어야 해요.');
-    const first=n===1?1:c.value,second=n===1?1:n!-(first??0);
+    const sum=c.sum??(n===1?2:n!);if(c.sum!==undefined&&(![n,13-n!].includes(sum)||sum<2||sum>12))throw Error('허용되지 않은 분열 합계예요.');const first=c.value,second=sum-first;
     if(!Number.isInteger(first)||first!<1||first!>6||second<1||second>6)throw Error('합계에 맞는 두 눈을 고르세요.');
-    if(n===1)t.extra-=8;
+    t.extra+=8;
     s.dice[i]=first!;s.dice.push(second);s.held[i]=true;s.held.push(true);t.monster.split=true;t.first=null;t.flags.push('final');
     if(t.fixed?.includes(i))t.fixed.push(s.dice.length-1);
     if(t.sealed?.includes(i)){s.dice[i]=1;s.dice[s.dice.length-1]=1;t.sealed.push(s.dice.length-1);}
-    s.motion=null;effectResult(s,`${p.nickname} · 괴물 분열! ${n} → ${s.dice[i]} · ${s.dice.at(-1)}${n===1?' / 소화불량 -8점':''} · 이제 점수를 기록하세요.`);return;
+    s.motion=null;effectResult(s,`${p.nickname} · 괴물 분열! ${n} → ${s.dice[i]} · ${s.dice.at(-1)} / 분열 보너스 +8점 · 이제 점수를 기록하세요.`);return;
   }
   if(t.monster?.split&&['cat','memory','fork'].includes(c.id??''))throw Error('괴물 분열 후에는 세계를 되돌릴 수 없어요.');
   const id = c.id ?? "",
@@ -976,7 +981,7 @@ function executeAugment(
     t.flags.push("loanDoublePending");
     prepareAugmentRoll(s,random);
     s.rollPhase="shaking";
-    effectResult(s, `${p.nickname} · 판돈 두 배! 25점 이상 +40 / 실패 -20. 한 번 더 던지세요!`);
+    effectResult(s, `${p.nickname} · 판돈 두 배! 25점 이상 +60 / 실패 -20. 한 번 더 던지세요!`);
     return;
   }
   const item = [...ap.items]
@@ -1023,10 +1028,10 @@ function executeAugment(
       if(!q||turnsLeft(p)<2||turnsLeft(q)<2||q.augment!.curse||a.custody?.some(l=>[l.a,l.b].some(id=>id===p.id||id===q.id)))throw Error('두 턴 이상 남고 공동 육아와 방해가 없는 상대를 고르세요.');
       const index=s.dice.findIndex((_,i)=>!t.fixed?.includes(i)&&!t.sealed?.includes(i)&&t.locked!==i);
       if(index<0)throw Error('공동 주사위로 쓸 수 있는 주사위가 없어요.');
-      if(attack(s,p,q)){(a.custody??=[]).push({a:p.id,b:q.id,face:null,aLeft:2,bLeft:2,aPaid:0,bPaid:0});t.childIndex=index;q.augment!.curse={id,from:p.id};effectResult(s,`${p.nickname} ↔ ${q.nickname} · 공동 육아 시작! ${index+1}번 주사위 마지막 눈을 전달, 각자 2턴`);}
+      if(attack(s,p,q)){ap.bonus+=10;effectResult(s,`${p.nickname} · 육아 계약금 +10점`);(a.custody??=[]).push({a:p.id,b:q.id,face:null,aLeft:2,bLeft:2,aPaid:0,bPaid:0});t.childIndex=index;q.augment!.curse={id,from:p.id};effectResult(s,`${p.nickname} ↔ ${q.nickname} · 공동 육아 시작! ${index+1}번 주사위 마지막 눈을 전달, 각자 2턴`);}
     }else if(id==='crown'){
       if(s.rollCount||a.crown||alive(s).some(q=>turnsLeft(q)<2))throw Error('모두 두 턴 이상 남아 있을 때 첫 굴림 전에, 판 전체 한 번만 개최할 수 있어요.');
-      a.crown={holder:p.id,threshold:25,claimed:false,finished:false,entries:alive(s).map(q=>({id:q.id,left:2}))};ap.bonus+=10;effectResult(s,`${p.nickname} · 왕관 개최! +10점 지급, 각자 두 턴 뒤 최종 보유자 +40점! 첫 탈취 기본 25점 이상`);
+      a.crown={host:p.id,holder:p.id,threshold:25,claimed:false,finished:false,entries:alive(s).map(q=>({id:q.id,left:2}))};ap.bonus+=15;effectResult(s,`${p.nickname} · 왕관 개최! +15점 지급, 각자 두 턴 뒤 최종 보유자 +40점! 첫 탈취 기본 25점 이상`);
       for(const q of alive(s).filter(q=>q.id!==p.id))for(const spare of q.augment!.items.filter(i=>i.id==='crown'&&i.remaining>0)){spare.remaining=0;spare.earned=35;q.augment!.bonus+=35;effectResult(s,`${q.nickname} · 다른 플레이어가 먼저 왕관을 개최해 미사용 초대장을 +35점으로 환전! 왕관 쟁탈에는 그대로 참가합니다.`,[{playerId:q.id,amount:35,reason:'중복 왕관 초대장 환전'}]);}
     }
     if(item!.usedTurn===t.serial&&item!.extraTurn===t.serial)item!.extraTurn=undefined;
@@ -1255,6 +1260,7 @@ function executeAugment(
                 ? [s.dice[die]!]
                 : undefined,
         };
+        if(id === "receipt"){ap.bonus+=6;effectResult(s,`${p.nickname} · 폭탄 설치 +6점`);}
         if (id === "broken")
           ap.items.push({
             id: other!,
@@ -1265,9 +1271,10 @@ function executeAugment(
           });
         if (id === "misdelivery") change(s, die, c.value!);
       }
-    if (id === "dinner") {
-      ap.bonus += 8;
-      effectResult(s, `${p.nickname} · 회식 보너스 +8점 지급 완료`);
+    if(id==="dinner")ap.curse=null;
+    if (id === "dinner" && alive(s).some(q=>q.id!==p.id&&q.augment!.curse?.id===id&&q.augment!.curse.from===p.id)) {
+      ap.curse=null;ap.bonus += 20;
+      effectResult(s, `${p.nickname} · 회식 보너스 +20점 지급 완료`);
     }
     if(id==="handsUp" && alive(s).some(q=>q.id!==p.id&&q.augment!.curse?.id===id&&q.augment!.curse.from===p.id)){
       ap.bonus+=10;
@@ -1464,7 +1471,7 @@ function executeAugment(
   } else if (!["loan", "devil", "bomb", "substitute"].includes(id))
     throw Error("지원하지 않는 능력입니다.");
   if(id==="ordinaryDay")for(const q of alive(s).filter(q=>q.augment!.curse?.id===id&&q.augment!.curse.from===p.id)){const paid=transfer(s,q,p,15,25);q.augment!.curse!.paid=paid;effectResult(s,`${p.nickname} · ${q.nickname}에게 선불 통행료 ${paid}점 강탈 완료 · 다음 턴 종류별 5점, 합계 25점까지`);}
-  if(id==="parkingTicket"&&alive(s).some(q=>q.augment!.curse?.id===id&&q.augment!.curse.from===p.id)){ap.bonus+=3;effectResult(s,`${p.nickname} · 주차 위반 예약 성공 +3점 지급 완료`);}
+  if(id==="parkingTicket"&&alive(s).some(q=>q.augment!.curse?.id===id&&q.augment!.curse.from===p.id)){ap.bonus+=5;effectResult(s,`${p.nickname} · 주차 위반 예약 성공 +5점 지급 완료`);}
 
   if (item) {
     if(item.usedTurn===t.serial&&item.extraTurn===t.serial)item.extraTurn=undefined;
@@ -1561,7 +1568,7 @@ function afterAugmentRollCore(s:RoomState,random:Random){
       if(s.rollCount===1)t.first = snapshot(s);
       t.kept = t.kept.filter(i=>i!==r.index);
       const source=alive(s).find(q=>q.id===curse?.from);
-      if(source){source.augment!.bonus+=6;effectResult(s,`${source.nickname} · 연습비 +6점 지급 완료`);}
+      if(source){source.augment!.bonus+=8;effectResult(s,`${source.nickname} · 연습비 +8점 지급 완료`);}
     }
     return;
   }
@@ -1584,15 +1591,17 @@ function afterAugmentRollCore(s:RoomState,random:Random){
       p.augment!.curse?.id === "dropIt" &&
       !t.flags.includes("bananaApplied")
     ) {
-      const highest = Math.max(...s.dice.map((n,i) => i===monsterIndex(s)?0:n ?? 0));
-      const indices = s.dice.flatMap((n, i) => (n === highest && i!==monsterIndex(s) ? [i] : []));
-      const index = indices[random(indices.length)]!;
-      change(s, index, 1);
-      t.flags.push("bananaApplied");
+      const slots=s.dice.flatMap((n,i)=>n!==null&&i!==monsterIndex(s)&&!t.fixed?.includes(i)&&!t.sealed?.includes(i)&&t.locked!==i?[i]:[]);
+      if(slots.length){
+      const highest=Math.max(...slots.map(i=>s.dice[i]!));
+      const indices=slots.filter(i=>s.dice[i]===highest),index=indices[random(indices.length)]!;
+      change(s,index,1);t.flags.push("bananaApplied");
+      const source=alive(s).find(q=>q.id===p.augment!.curse!.from);if(source){source.augment!.bonus+=highest>1?8:4;effectResult(s,`${source.nickname} · 바나나 보상 +${highest>1?8:4}점`);}
       effectResult(
         s,
         `${p.nickname} · 바나나 껍질! ${index + 1}번 주사위 ${highest} → 1`,
       );
+    }
     }
     if (p.augment!.curse?.id === "lock") {
       const slots=s.dice.flatMap((_,i)=>t.fixed?.includes(i)||t.sealed?.includes(i)||i===monsterIndex(s)?[]:[i]);
@@ -1624,7 +1633,7 @@ function afterAugmentRollCore(s:RoomState,random:Random){
       const highest = Math.max(...s.dice.map((n,i) => t.locked===i||t.fixed?.includes(i)||i===monsterIndex(s)?0:n!)),
         indices = s.dice.flatMap((n, i) => (n === highest && t.locked!==i&&!t.fixed?.includes(i)&&i!==monsterIndex(s) ? [i] : [])),
         index = indices[random(indices.length)]!;
-      if(!indices.length)return;
+      if(!indices.length){const source=alive(s).find(q=>q.id===curse.from);if(source){source.augment!.bonus+=5;effectResult(s,`${source.nickname} · 재굴림 불가 보상 +5점`);}return;}
       t.reroll = {
         id: "practice",
         index,

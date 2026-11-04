@@ -19,7 +19,7 @@ test('pressure: pay, challenge win, challenge reversal and zero floor',()=>{
 test('double wager requires actual third ordinary roll and is not duplicated',()=>{
  const s=fixture(['loan']);use(s,'loan');roll(s);s.rollCount=2;use(s,'loanDouble');assert.equal(s.rollPhase,'shaking');assert.throws(()=>recordAugment(s,actor(s),'choice'));
  s.rollPhase='idle';assert.throws(()=>use(s,'loanDouble'));s.rollCount=3;afterAugmentRoll(s,()=>0);
- assert.equal(augmentedScore(s,actor(s),'choice').extra,40);s.dice.fill(1);assert.equal(augmentedScore(s,actor(s),'choice').extra,-5); // turn score floor
+ assert.equal(augmentedScore(s,actor(s),'choice').extra,60);s.dice.fill(1);assert.equal(augmentedScore(s,actor(s),'choice').extra,-5); // turn score floor
 });
 test('duel refusal preserves normal rolls and accepted ties pay once',()=>{
  for(const value of [0,1]){

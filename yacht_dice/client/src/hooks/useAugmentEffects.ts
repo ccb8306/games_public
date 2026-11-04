@@ -6,17 +6,33 @@ export function effectDuration(
   reduced = false,
   backlog = 0,
 ) {
-  return reduced
-    ? 350
-    : backlog > 3
-      ? result.presentation?.level === "major"
-        ? 850
-        : 350
-      : result.presentation?.level === "major"
-        ? 1300
-        : result.presentation?.level === "emphasis"
-          ? 850
-          : 500;
+  const base =
+    result.presentation?.level === "major"
+      ? 6000
+      : result.presentation?.level === "emphasis"
+        ? 4500
+        : 3000;
+  return Math.min(
+    8000,
+    Math.max(
+      base,
+      1500 +
+        [
+          result.activation?.actor,
+          result.activation?.targets.join(" "),
+          result.activation?.effect ?? result.text,
+          ...(result.presentation?.players.map(
+            (p) => `${p.name} ${p.before} ${p.after}`,
+          ) ?? []),
+          ...(result.presentation?.cells.map(
+            (c) => `${c.category} ${c.before} ${c.after}`,
+          ) ?? []),
+        ]
+          .join(" ")
+          .replace(/\s/g, "").length *
+          50,
+    ),
+  );
 }
 export function useAugmentEffects(
   room: RoomState,
@@ -33,6 +49,7 @@ export function useAugmentEffects(
       }
     }),
     [reduced, setReduced] = useState(false);
+  const [overflow, setOverflow] = useState(0);
   const last = useRef<{
     room: string;
     epoch: number;
@@ -68,6 +85,7 @@ export function useAugmentEffects(
         seen: new Set(results.map((r) => r.key)),
       };
       setQueue([]);
+      setOverflow(0);
       return;
     }
     if (previous.cursor === latest) return;
@@ -98,20 +116,45 @@ export function useAugmentEffects(
         : fresh.length
           ? [{ ...fresh.at(-1)!, text: fresh.map((r) => r.text).join("\n") }]
           : [];
-    setQueue((q) => {
-      const next = [...q, ...visual];
-      return next.length <= 8 ? next : [next[0]!, ...next.slice(-7)];
-    });
+    setQueue((q) => [...q, ...visual]);
   }, [room.roomId, latest, snapshotEpoch, connected, enabled, muted]);
+  useEffect(() => {
+    if (queue.length > 8) {
+      setOverflow((n) => n + queue.length - 8);
+      setQueue((q) => q.slice(0, 8));
+    }
+  }, [queue]);
+  const [paused, setPaused] = useState(false),
+    [pinned, setPinned] = useState(false),
+    [hidden, setHidden] = useState(false);
+  const remaining = useRef(0),
+    timerKey = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const update = () => setHidden(document.hidden);
+    document.addEventListener("visibilitychange", update);
+    return () => document.removeEventListener("visibilitychange", update);
+  }, []);
   const current = queue[0];
   useEffect(() => {
     if (!current || muted) return;
+    if (timerKey.current !== current.key) {
+      timerKey.current = current.key;
+      remaining.current = effectDuration(current);
+    }
+    if (paused || pinned || hidden) return;
+    const started = Date.now();
     const timer = setTimeout(
       () => setQueue((q) => (q[0]?.key === current.key ? q.slice(1) : q)),
-      effectDuration(current, reduced, queue.length),
+      Math.max(1500, remaining.current),
     );
-    return () => clearTimeout(timer);
-  }, [current?.key, muted, reduced]);
+    return () => {
+      clearTimeout(timer);
+      remaining.current = Math.max(
+        0,
+        remaining.current - (Date.now() - started),
+      );
+    };
+  }, [current?.key, muted, paused, pinned, hidden]);
   const toggle = () =>
     setMuted((value) => {
       const next = !value;
@@ -123,12 +166,24 @@ export function useAugmentEffects(
     });
   return {
     current: muted ? undefined : current,
-    skip: () => setQueue((q) => q.slice(1)),
-    skipAll: () => setQueue([]),
+    skip: () => {
+      setPinned(false);
+      setQueue((q) => q.slice(1));
+    },
+    skipAll: () => {
+      setPinned(false);
+      setQueue([]);
+    },
     muted,
     toggle,
     reduced,
+    overflow,
+    clearOverflow: () => setOverflow(0),
     queued: queue.length,
+    paused,
+    setPaused,
+    pinned,
+    setPinned,
   };
 }
 export type AugmentEffects = ReturnType<typeof useAugmentEffects>;

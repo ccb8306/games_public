@@ -8,15 +8,15 @@ const roll=(s,dice=[1,2,3,4,5],count=1)=>{s.dice=[...dice];s.held=dice.map(()=>f
 test('parallel uses spent categories in the final turn, pays only raw score, twice per game once per turn',()=>{
  const s=fixture(['parallel','hunter','defect']);const p=s.players[0];
  for(const k of SCORE_CATEGORIES)p.scores[k]=0;p.scores.ones=null;
- roll(s,[6,6,6,6,1]);use(s,'parallel',{category:'yacht'});assert.equal(scoreBreakdown(s,p,'ones').augment,8); // hunter only, defect must not turn parallel into 40
+ roll(s,[6,6,6,6,1]);use(s,'parallel',{category:'yacht'});assert.equal(scoreBreakdown(s,p,'ones').augment,12); // hunter only, defect must not turn parallel into 40
  assert.throws(()=>use(s,'parallel',{category:'choice'}));
- s.dice=[6,6,6,6,6];const preview=scoreBreakdown(s,p,'ones');assert.equal(preview.augment,52);recordAugment(s,p,'ones');assert.equal(p.scores.yacht,0);assert.equal(p.augment.bonus,52);
+ s.dice=[6,6,6,6,6];const preview=scoreBreakdown(s,p,'ones');assert.equal(preview.augment,58);recordAugment(s,p,'ones');assert.equal(p.scores.yacht,0);assert.equal(p.augment.bonus,58);
 });
 
-test('minimum guarantee pays only missing recorded points and caps lifetime at 45 without upper credit',()=>{
+test('minimum guarantee pays only missing recorded points and caps lifetime at 60 without upper credit',()=>{
  const s=fixture(['erase']);const p=s.players[0];
- for(const [i,k] of ['ones','twos','threes'].entries()){roll(s,[6,6,6,6,6]);const expected=[20,20,5][i];assert.equal(scoreBreakdown(s,p,k).augment,expected);recordAugment(s,p,k);}
- assert.equal(p.augment.bonus,45);assert.equal(p.augment.rawUpper,0);roll(s);assert.equal(scoreBreakdown(s,p,'yacht').augment,0);
+ for(const [i,k] of ['ones','twos','threes'].entries()){roll(s,[6,6,6,6,6]);const expected=[25,25,10][i];assert.equal(scoreBreakdown(s,p,k).augment,expected);recordAugment(s,p,k);}
+ assert.equal(p.augment.bonus,60);assert.equal(p.augment.rawUpper,0);roll(s);assert.equal(scoreBreakdown(s,p,'yacht').augment,0);
 });
 
 test('all 7776 outcomes agree between final-turn preview and settlement with passive reworks',()=>{
@@ -64,7 +64,7 @@ test('tariff charges immediate, passive and distinct active effects, never repea
 test('custody pays guardian according to final shared die and caps each guardian',()=>{
  const s=fixture(['custody']),[p,q]=s.players;use(s,'custody',{target:q.id});
  for(let i=0;i<4;i++){const actor=s.players.find(p=>p.id===s.currentPlayerId);roll(s,[actor===p?6:1,2,3,4,5]);recordAugment(s,actor,i<2?'choice':'sixes');advanceAugment(s,()=>0);}
- assert.equal(p.augment.bonus,18);assert.equal(q.augment.bonus,0);
+ assert.equal(p.augment.bonus,37);assert.equal(q.augment.bonus,0);
 });
 
 test('estate relocates a failed plot once without granting points or another draft',()=>{
@@ -96,7 +96,7 @@ test('finalized event results reject both new free rerolls without spending a ch
 });
 
 test('a moved hunter retains its paid budget and a sealed non-one survives the old-world choice',()=>{
- const s=fixture(['hunter']),p=s.players[0];p.augment.items[0].earned=34;roll(s,[6,6,6,6,6]);assert.equal(scoreBreakdown(s,p,'choice').augment,2);recordAugment(s,p,'choice');assert.equal(p.augment.items[0].earned,36);
+ const s=fixture(['hunter']),p=s.players[0];p.augment.items[0].earned=52;roll(s,[6,6,6,6,6]);assert.equal(scoreBreakdown(s,p,'choice').augment,2);recordAugment(s,p,'choice');assert.equal(p.augment.items[0].earned,54);
  const q=fixture(['cat']);roll(q,[3,2,3,4,5]);afterAugmentRoll(q,()=>0);q.augment.turn.sealed=[0];q.augment.turn.fixed=[0];q.rollCount=3;use(q,'cat');useAugment(q,q.players[0],{op:'world',value:1},()=>0);assert.equal(q.dice[0],3);
 });
 

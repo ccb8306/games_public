@@ -7,7 +7,7 @@ test('silver tax transfers actual damage and practice pays once after successful
  const s=fixture(['taxSix']);use(s,'taxSix',{target:s.players[1].id});advanceAugment(s,()=>0);s.dice=[6,6,6,1,1];s.rollCount=1;
  recordAugment(s,s.players[1],'choice');assert.equal(s.players[0].augment.bonus,9);assert.equal(s.players[1].augment.bonus,-9);
  const x=fixture(['practice']);use(x,'practice',{target:x.players[1].id});advanceAugment(x,()=>0);x.dice=[6,2,3,4,5];x.rollCount=2;afterAugmentRoll(x,()=>0);assert.equal(x.players[0].augment.bonus,0);
- x.rollCount++;x.rollPhase='idle';afterAugmentRoll(x,()=>0);afterAugmentRoll(x,()=>0);assert.equal(x.players[0].augment.bonus,6);
+ x.rollCount++;x.rollPhase='idle';afterAugmentRoll(x,()=>0);afterAugmentRoll(x,()=>0);assert.equal(x.players[0].augment.bonus,8);
 });
 test('mixer protects caster and pays only if a rival is marked; construction leaves exactly two choices',()=>{
  for(const shield of [false,true]){

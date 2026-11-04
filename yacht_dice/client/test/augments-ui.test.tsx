@@ -129,7 +129,9 @@ test("card reroll is separate from selection, spends only its slot and reports t
     assert.equal(room.players[0]!.augment!.offers.length, 0);
     await act(async () =>
       document
-        .querySelector<HTMLButtonElement>(".augment-result-burst > button")!
+        .querySelector<HTMLButtonElement>(
+          '.augment-result-burst > button[aria-label="지급 알림 닫기"]',
+        )!
         .click(),
     );
     room.augment!.drafting = false;
@@ -223,7 +225,7 @@ test("card reroll is separate from selection, spends only its slot and reports t
     assert.ok(document.querySelector(".augment-result-burst"));
     room.augment!.log.push("다음 행동");
     await act(async () => render());
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 1900)));
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 3300)));
     assert.equal(document.querySelector(".augment-result-burst"), null);
     room.augment!.results.push({
       key: "activation-ui",

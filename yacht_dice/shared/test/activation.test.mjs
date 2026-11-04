@@ -24,5 +24,5 @@ test('dice edits include actual faces; failed uses do not publish activations; d
  assert.match(s.augment.results.at(-1).activation.effect,/1번 주사위 3 → 4/);
  const count=s.augment.results.length;assert.throws(()=>use(s,'nudge',{die:0,value:5}));assert.equal(s.augment.results.length,count);
  const d=fixture(['loan']);use(d,'loan');d.rollCount=2;d.dice=[1,2,3,4,5];use(d,'loanDouble');
- assert.match(d.augment.results.at(-1).activation.effect,/\+40/);assert.doesNotMatch(d.augment.results.at(-1).activation.effect,/\+20/);
+ assert.match(d.augment.results.at(-1).activation.effect,/\+60/);assert.doesNotMatch(d.augment.results.at(-1).activation.effect,/\+20/);
 });

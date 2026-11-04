@@ -137,7 +137,8 @@ export function flashEligible(s: RoomState, p: PublicPlayer, id: string) {
     }
   return commands.some((c) => {
     try {
-      flashTargets(s, p, c);
+      const targets=flashTargets(s,p,c);
+      if(id==="strike"&&targets.filter(({q})=>q.id===p.id||!q.augment!.items.some(i=>(i.id==="shield"&&i.remaining>0)||(i.id==="reflect"&&!goldDisabled(q,"reflect")&&i.usedRound!==s.augment!.round))).length<3)return false;
       return true;
     } catch {
       return false;

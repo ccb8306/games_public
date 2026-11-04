@@ -10,7 +10,7 @@ test('bounty coexists with hostile reservations, leaves shields intact, and pays
   const s=fixture(['bounty']),[p,q]=s.players;give(q,['shield']);q.augment.curse={id:'seal',from:p.id};
   use(s,p,'bounty',{target:q.id,value:6});assert.equal(q.augment.curse.id,'seal');assert.equal(q.augment.items[0].remaining,1);
   assert.throws(()=>use(s,p,'bounty',{target:q.id,value:6}));advanceAugment(s,()=>0);roll(s,hit?[6,6,1,2,3]:[1,2,3,4,5]);recordAugment(s,q,'choice');
-  assert.equal(p.augment.bonus,hit?8:0);assert.equal(q.augment.bonus,hit?0:3);assert.deepEqual(q.augment.bounties,[]);
+  assert.equal(p.augment.bonus,hit?12:3);assert.equal(q.augment.bonus,hit?0:3);assert.deepEqual(q.augment.bounties,[]);
  }
 });
 test('button toll permits powers, exempts silver, and caps actual payments at fifteen',()=>{
@@ -34,8 +34,8 @@ test('sponsor follows the card and self-contracts reopen without minting a fresh
 test('sponsor pays selected rival only and rewards matching their score within the card budget',()=>{
  const s=fixture(['parasite'],3),[p,q,r]=s.players;use(s,p,'parasite',{target:q.id});
  roll(s,[6,6,6,6,6]);recordAugment(s,r,'choice');assert.equal(p.augment.bonus,0);
- recordAugment(s,q,'choice');assert.equal(p.augment.bonus,5);
- assert.equal(augmentedScore(s,p,'choice').extra,5);recordAugment(s,p,'choice');assert.equal(p.augment.bonus,10);assert.equal(p.augment.items[0].earned,10);
+ recordAugment(s,q,'choice');assert.equal(p.augment.bonus,6);
+ assert.equal(augmentedScore(s,p,'choice').extra,6);recordAugment(s,p,'choice');assert.equal(p.augment.bonus,12);assert.equal(p.augment.items[0].earned,12);
 });
 test('last shot is a physical reroll after roll three, retains the count and closes further rerolls',()=>{
  const s=fixture(['lastmove']),p=s.players[0];roll(s);assert.throws(()=>use(s,p,'lastmove',{die:0}));

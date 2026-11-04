@@ -72,6 +72,7 @@ for(let game=0;game<games;game++){
     for(let offerIndex=0;offerIndex<p.augment.offers.length;offerIndex++)if(!p.augment.rerolled[offerIndex]&&random(3)===0){command({op:'refresh',offerIndex,id:p.augment.offers[offerIndex]},p,true);refreshes++;p=s.players.find(p=>p.id===id);}
     const pick=s.augment.round===7&&p.augment.items.some(i=>i.id==='nudge')&&random(2)===0?'evolution':p.augment.offers[random(p.augment.offers.length)];picks[pick]=(picks[pick]??0)+1;command({op:'pick',id:pick},p,true);
    }
+   if(s.augment.turn.pending)settle();
    for(const id of s.players.map(p=>p.id)){
     const p=s.players.find(p=>p.id===id),instant=pendingInstant(p);if(!instant)continue;
     if(['customDie','estate'].includes(instant)){command({op:'use',id:instant,faces:[1,1,1,6,6,6],categories:SCORE_CATEGORIES.filter(k=>p.scores[k]===null).slice(0,3)},p,true);continue;}

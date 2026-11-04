@@ -160,6 +160,8 @@ export function AugmentPanel({
   const [selected, setSelected] = useState<string | null>(null),
     [indices, setIndices] = useState<number[]>([]),
     [library, setLibrary] = useState(false);
+  const [draftInspect, setDraftInspect] = useState(false);
+  useEffect(() => setDraftInspect(false), [a.round, a.drafting]);
   const [catalogFilter, setCatalogFilter] = useState("all");
   const [catalogRarity, setCatalogRarity] = useState("all");
   const [catalogSearch, setCatalogSearch] = useState("");
@@ -169,7 +171,7 @@ export function AugmentPanel({
   const overlay =
     !!selected ||
     library ||
-    a.drafting ||
+    (a.drafting && !draftInspect) ||
     !!t.chooseOld ||
     (room.currentPlayerId === playerId && !!t.pending);
   useEffect(() => {
@@ -208,7 +210,7 @@ export function AugmentPanel({
       document.body.style.overflow = oldOverflow;
       previous?.focus({ preventScroll: true });
     };
-  }, [overlay, selected, a.drafting, !!t.chooseOld, t.pending]);
+  }, [overlay, selected, a.drafting, draftInspect, !!t.chooseOld, t.pending]);
   if (!p || !ap) return null;
   const myTurn = room.currentPlayerId === playerId,
     usable = myTurn && !disabled && !a.drafting;
@@ -408,16 +410,37 @@ export function AugmentPanel({
             data-kind={resultBurst.activation?.kind}
             data-rarity={resultBurst.activation?.rarity}
             data-flash={resultBurst.activation?.flash}
+            onMouseEnter={() => fx.setPaused(true)}
+            onMouseLeave={() => fx.setPaused(false)}
+            onFocus={() => fx.setPaused(true)}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget))
+                fx.setPaused(false);
+            }}
             role="status"
             key={resultBurst.key}
           >
             <AugmentEvent result={resultBurst} room={room} />
+            <button
+              onClick={() => fx.setPinned(!fx.pinned)}
+              aria-pressed={fx.pinned}
+            >
+              {fx.pinned ? "고정 해제" : "고정"}
+            </button>
             <button type="button" aria-label="지급 알림 닫기" onClick={fx.skip}>
               ×
             </button>
           </div>,
           document.body,
         )}
+      {fx.overflow > 0 && (
+        <details className="effect-overflow">
+          <summary>추가 {fx.overflow}건 · 내역 보기</summary>
+          {room.augment?.results.map((r) => (
+            <p key={r.key}>{r.text}</p>
+          ))}
+        </details>
+      )}
       <div className="augment-status">
         <button onClick={fx.toggle} aria-pressed={fx.muted}>
           {fx.muted ? "연출 꺼짐" : "연출 켜짐"}
@@ -455,7 +478,8 @@ export function AugmentPanel({
         {ap?.bounties?.map((b) => (
           <span key={b.from} className="augment-curse">
             {room.players.find((q) => q?.id === b.from)?.nickname}의 수배: 내
-            다음 결과에 {b.face}가 2개 이상이면 상대 +8점, 피하면 나 +3점
+            다음 결과에 {b.face}가 2개 이상이면 상대 +12점, 피하면 나와 상대
+            각각 +3점
           </span>
         ))}
         <button onClick={() => setLibrary(true)}>능력 도감</button>
@@ -469,15 +493,33 @@ export function AugmentPanel({
         )}
       </div>
       {a.drafting &&
+        draftInspect &&
+        createPortal(
+          <button
+            className="draft-return primary"
+            onClick={() => setDraftInspect(false)}
+          >
+            증강 선택으로 돌아가기
+          </button>,
+          document.body,
+        )}
+      {a.drafting &&
+        !draftInspect &&
         !selected &&
         createPortal(
           <div
-            className="augment-overlay"
+            className="augment-overlay draft-overlay"
             role="dialog"
             aria-modal="true"
             aria-label="증강 선택"
           >
             <div className="augment-dialog augment-draft">
+              <button
+                className="draft-inspect"
+                onClick={() => setDraftInspect(true)}
+              >
+                점수판·내 증강 보기
+              </button>
               {error && (
                 <p className="notice error" role="alert">
                   {error}
@@ -665,8 +707,8 @@ export function AugmentPanel({
           <strong>
             {t.flags.includes("loanDouble") ||
             t.flags.includes("loanDoublePending")
-              ? "성공 +40 / 실패 -20"
-              : "성공 +20 / 실패 -10"}
+              ? "성공 +60 / 실패 -20"
+              : "성공 +30 / 실패 -10"}
           </strong>
           {t.flags.includes("loanDoublePending") && (
             <small>두 배 승부 예약 · 던지기를 완료해야 기록할 수 있어요.</small>
@@ -790,13 +832,13 @@ export function AugmentPanel({
                 item.id === "cleaner"
                   ? `자동 +6점 유지 · 청소권 ${ap.progress?.cleanerVoucher ?? 0}장 · 발급 ${ap.progress?.cleanerCreated ?? 0}/2장`
                   : item.id === "erase"
-                    ? `보충 지급 +${ap.progress?.erase ?? 0}/45점`
+                    ? `보충 지급 +${ap.progress?.erase ?? 0}/60점`
                     : item.id === "hunter"
-                      ? `사냥 보너스 +${item.earned ?? 0}/36점`
+                      ? `사냥 보너스 +${item.earned ?? 0}/54점`
                       : item.id === "customDie" && ap.customFaces
                         ? `인쇄 완료 · 이번 턴만 적용 · ${ap.customFaces.join(" / ")}`
                         : item.id === "estate" && ap.estate
-                          ? `부지 ${ap.estate.completed.length}/3곳 완공 · +${ap.estate.paid}/32점 지급`
+                          ? `부지 ${ap.estate.completed.length}/3곳 완공 · +${ap.estate.paid}/40점 지급`
                           : item.id === "monster" &&
                               myTurn &&
                               monsterIndex(room) !== undefined
@@ -806,17 +848,17 @@ export function AugmentPanel({
                               : item.id === "revive"
                                 ? `보유 ${item.remaining}회 · 이 카드 ${item.uses ?? 0}/3회 사용`
                                 : item.id === "savings"
-                                  ? `현재 ${Math.min(3, ap.streak)}/3연속 · ${ap.progress?.savings ?? 0}/2회 지급`
+                                  ? `현재 ${Math.min(3, ap.streak)}/3연속 · 만기 ${ap.progress?.savings ?? 0}/2회 · 누적 +${ap.progress?.savingsPaid ?? 0}/36점`
                                   : item.id === "loser"
                                     ? `이 카드 ${item.uses ?? 0}/3턴 발동`
                                     : item.id === "parasite" && item.target
-                                      ? `${room.players.find((q) => q?.id === item.target)?.nickname ?? "나간 플레이어"}와 계약 · 누적 +${item.earned ?? 0}/40점`
+                                      ? `${room.players.find((q) => q?.id === item.target)?.nickname ?? "나간 플레이어"}와 계약 · 누적 +${item.earned ?? 0}/48점`
                                       : item.id === "stubborn"
                                         ? myTurn
                                           ? `보관 유지 ${t.kept.length}개 · 금고 ${t.kept.length >= 2 ? Math.min(9, Math.max(0, room.rollCount - 1) * 3) : 0}점`
                                           : "다음 내 턴에 금고를 채워요"
                                         : item.id === "clockwork"
-                                          ? `${myTurn ? `이번 올인 ${t.flags.filter((f) => f.startsWith("allInRoll:")).length}회 · ` : ""}누적 +${ap.progress?.clockwork ?? 0}/36점`
+                                          ? `${myTurn ? `이번 올인 ${t.flags.filter((f) => f.startsWith("allInRoll:")).length}회 · ` : ""}누적 +${ap.progress?.clockwork ?? 0}/54점`
                                           : item.borrowedAt !== undefined
                                             ? `대여 · ${item.remaining}회 남음 · 다음 내 턴 끝에 반납`
                                             : goldDisabled(p, item.id)
@@ -830,7 +872,7 @@ export function AugmentPanel({
                                                         "spectator",
                                                         "parasite",
                                                       ].includes(item.id)
-                                                    ? `누적 +${ap.progress?.[item.id] ?? 0}/${item.id === "spectator" ? 28 : 40}점`
+                                                    ? `누적 +${ap.progress?.[item.id] ?? 0}/${item.id === "spectator" ? 30 : 48}점`
                                                     : "자동 발동 · 눌러 설명"
                                                 : item.remaining === 0
                                                   ? [

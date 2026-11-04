@@ -157,19 +157,21 @@ export function NovelAugmentInputs({
         <h3>괴물의 눈: {n || "아직 안 굴림"}</h3>
         <p>분열하면 더 굴릴 수 없습니다. 이번 결과로 채점합니다.</p>
         <div className="augment-choice">
-          {[1, 2, 3, 4, 5, 6]
-            .filter((v) =>
-              n === 1 ? v === 1 : n - v >= 1 && n - v <= 6 && v <= n - v,
-            )
-            .map((v) => (
-              <button
-                key={v}
-                disabled={!enabled || !room.rollCount}
-                onClick={() => use({ value: v })}
-              >
-                {n === 1 ? "1 + 1 · 소화불량 -8점" : `${v} + ${n - v}로 분열`}
-              </button>
-            ))}
+          {[n, 13 - n]
+            .filter((sum) => sum >= 2 && sum <= 12)
+            .flatMap((sum) =>
+              [1, 2, 3, 4, 5, 6]
+                .filter((v) => sum - v >= 1 && sum - v <= 6 && v <= sum - v)
+                .map((v) => (
+                  <button
+                    key={`${sum}:${v}`}
+                    disabled={!enabled || !room.rollCount}
+                    onClick={() => use({ value: v, sum })}
+                  >
+                    {v} + {sum - v}로 분열 · +8점
+                  </button>
+                )),
+            )}
         </div>
       </section>
     );
@@ -178,7 +180,7 @@ export function NovelAugmentInputs({
     <button className="primary" disabled={!enabled} onClick={() => use()}>
       {id === "monster"
         ? "주사위 둘 먹이기 · 12면체 합체"
-        : "왕관 행사 개최 · 즉시 +10점"}
+        : "왕관 행사 개최 · 즉시 +15점"}
     </button>
   );
 }
@@ -210,7 +212,7 @@ export function NovelAugmentStatus({
                 `${SCORE_LABELS[k as ScoreCategory]} ${e.completed.includes(k) ? "완공" : e.ruined.includes(k) ? "폐허" : "공사 중"}`,
             )
             .join(" / ")}{" "}
-          · 지급 +{e.paid}/32점
+          · 지급 +{e.paid}/40점
         </p>
       )}
       {a.custody?.map((l) => (

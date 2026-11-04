@@ -80,7 +80,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "stubborn",
     "name": "존버 금고",
-    "description": "첫 굴림에서 보관한 주사위 2개 이상을 지킨 채 다시 굴릴 때마다 금고 +3점, 최대 +9점! 기록하면 받아요. 2개 미만으로 남기면 금고가 깨져요.",
+    "description": "첫 굴림에서 보관한 주사위 2개 이상을 지키며 다시 굴릴 때마다 금고 +4점, 최대 12점! 기록하면 받아요. 2개 미만으로 남기면 금고가 깨져요.",
     "charges": 0,
     "tags": [
       "hold"
@@ -128,7 +128,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "upper",
     "name": "상단 후원자",
-    "description": "상단 숫자 칸에 해당 숫자 3개 이상을 기록하면 별도 +4점! 서로 다른 상단 3칸에서 성공하면 추가 +12점 한 번. 보너스는 상단 63점 계산에서 제외.",
+    "description": "상단 숫자 칸에 같은 눈 2개 이상을 기록하면 별도 +4점! 서로 다른 상단 3칸에서 성공하면 추가 +12점 한 번. 상단 63점에는 포함되지 않아요.",
     "charges": 0,
     "tags": [
       "upper"
@@ -140,7 +140,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "lower",
     "name": "꽝 적립소",
-    "description": "족보에 0점을 쓰면 즉시 별도 보너스 +8점! 마지막 턴에도 지급, 게임당 최대 3회.",
+    "description": "족보에 0점을 쓰면 별도 +10점! 어려운 칸을 포기하면서 점수를 챙겨요. 마지막 턴에도 지급, 게임당 최대 3회.",
     "charges": 0,
     "tags": [
       "zero"
@@ -152,7 +152,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "savings",
     "name": "적금 만기",
-    "description": "내 턴 3번 연속 족보에 1점 이상 기록하면 +18점! 지급 후 다시 도전, 최대 2번 지급. 중간에 0점이면 연속 기록은 처음부터.",
+    "description": "족보에 1점 이상 연속 기록하면 첫 턴 +3, 두 번째 +5, 세 번째 +10점! 한 묶음 18점, 최대 두 묶음·총 36점. 중간에 0점이면 연속 횟수만 초기화하고 받은 점수는 유지해요.",
     "charges": 0,
     "tags": [
       "safe"
@@ -200,7 +200,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "spectator",
     "name": "남의 떡 구경",
-    "description": "매 라운드 처음으로 상대가 기본 족보 20점 이상을 쓰면 나는 +4점! 라운드당 1회, 게임 전체 최대 28점.",
+    "description": "매 라운드 처음 상대가 기본 족보 20점 이상을 쓰면 나는 +5점! 라운드당 1회, 총 최대 30점.",
     "charges": 0,
     "tags": [
       "rival"
@@ -212,7 +212,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "shield",
     "name": "소형 방패",
-    "description": "첫 방해를 자동으로 막고 +6점! 끝까지 방해를 받지 않으면 마지막 내 턴 종료 시 +8점.",
+    "description": "첫 방해를 자동으로 막고 +15점! 끝까지 방해받지 않으면 마지막 내 턴에 +20점.",
     "charges": 1,
     "tags": [
       "defense"
@@ -325,7 +325,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "hunter",
     "name": "사냥꾼",
-    "description": "어느 칸에 기록하든 같은 눈 3개면 +4, 4개면 +8, 5개 이상이면 +12점! 가장 높은 보너스 하나만 지급, 게임 전체 최대 36점.",
+    "description": "어느 칸이든 같은 눈 3개로 기록하면 +6, 4개면 +12, 5개 이상이면 +18점! 가장 높은 것 하나만 지급, 총 최대 54점.",
     "charges": 0,
     "tags": [
       "kind"
@@ -362,7 +362,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "loan",
     "name": "여기서 두 배를 태워?",
-    "description": "첫 굴림 전에 선언! 기본 족보 25점 이상이면 +20점, 미만이면 -10점. 두 번째 일반 굴림 뒤 두 배 걸고 한 번 더 던지면 +40/-20! 게임당 1회.",
+    "description": "첫 굴림 전에 선언! 기본 족보 25점 이상이면 +30점, 미만이면 -10점. 두 번째 굴림 뒤 두 배 걸고 한 번 더 던지면 +60/-20점! 게임당 1회.",
     "charges": 1,
     "tags": [
       "gamble"
@@ -386,7 +386,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "parasite",
     "name": "너 내 스폰서 해라",
-    "description": "첫 굴림 전에 상대 한 명과 계약! 상대가 기본 족보 20점 이상 기록하면 나는 +5점. 내가 상대의 직전 기본 점수(최소 10점)를 넘거나 같아도 +5점! 합계 최대 40점, 계약은 게임 끝까지.",
+    "description": "상대 한 명과 계약! 상대가 기본 족보 20점 이상이면 나는 +6점. 내가 상대의 직전 기본 점수(최소 10점)를 따라잡아도 +6점! 총 최대 48점.",
     "charges": 1,
     "tags": [
       "rival"
@@ -434,7 +434,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "reflect",
     "name": "반사 방패",
-    "description": "매 라운드 나에게 처음 들어오는 방해를 막고, 공격한 사람에게 -5점. 이 반격은 다시 반사되지 않아요.",
+    "description": "라운드마다 첫 방해를 막고 공격자 -5점! 나는 방어마다 +6점(총 최대 24점). 끝까지 방어할 일이 없으면 마지막 내 턴에 +20점. 반격은 다시 반사되지 않아요.",
     "charges": 0,
     "tags": [
       "defense"
@@ -483,7 +483,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "defect",
     "name": "불량품 백화점",
-    "description": "아깝게 실패한 하단 족보도 낮은 점수로 인정해요. 포커·풀하우스·스트레이트·요트의 완화 조건은 아래 표에서 확인하세요.",
+    "description": "아깝게 실패한 하단 족보를 완화해서 인정해요! 정상 조건을 만족해 기록한 하단 족보는 별도 +10점. 포커·풀하우스·스트레이트·요트에 적용, 완화 조건은 상세 표를 확인하세요.",
     "charges": 0,
     "tags": [
       "kind"
@@ -491,9 +491,9 @@ export const AUGMENTS: AugmentDefinition[] = [
     "rarity": "prism",
     "trigger": "passive",
     "details": [
-      "포커: 같은 숫자 3개 → 전체 합의 80%(소수점 버림).",
-      "풀하우스: 같은 숫자 3개와 다른 숫자, 또는 서로 다른 두 쌍 → 전체 합의 80%.",
-      "스몰: 연속 숫자 3종 → 12점. 라지: 연속 숫자 4종 → 24점. 요트: 같은 숫자 4개 → 40점.",
+      "포커: 같은 숫자 3개 → 전체 합.",
+      "풀하우스: 같은 숫자 3개와 다른 숫자, 또는 서로 다른 두 쌍 → 전체 합.",
+      "스몰: 연속 숫자 3종 → 15점. 라지: 연속 숫자 4종 → 30점. 요트: 같은 숫자 4개 → 40점.",
       "정상 족보가 완성되면 정상 점수를 씁니다. 추가 주사위도 전부 계산합니다."
     ]
   },
@@ -515,7 +515,7 @@ export const AUGMENTS: AugmentDefinition[] = [
   {
     "id": "erase",
     "name": "최저점 보장",
-    "description": "족보에 20점 미만을 쓰면 부족한 만큼 별도 보너스로 채워요. 예: 기록 7점(+보너스 13점). 게임 전체 최대 45점, 상단 63점에는 포함하지 않아요.",
+    "description": "족보에 25점 미만을 쓰면 부족한 만큼 별도 보너스로 채워요! 예: 7점 기록(+18점). 총 최대 60점, 상단 63점에는 포함되지 않아요.",
     "charges": 0,
     "tags": [
       "zero"
@@ -635,8 +635,8 @@ export const AUGMENTS: AugmentDefinition[] = [
     "id": "taxSix",
     "name": "6 나왔죠? 세금입니다",
     "rarity": "silver",
-    "description": "상대의 다음 최종 주사위에서 6 하나당 3점씩 뺏어요. 최대 9점, 상대가 이번 턴 얻은 점수까지만! 방패로 방어, 게임당 2회.",
-    "charges": 2,
+    "description": "상대 다음 최종 주사위의 6 하나당 3점 강탈(최대 9점). 실제 징수가 3점 미만이면 부족분을 보너스로 받아요. 방패로 방어, 게임당 3회.",
+    "charges": 3,
     "trigger": "active",
     "tags": [
       "attack"
@@ -648,7 +648,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     "id": "dropIt",
     "name": "바나나 껍질",
     "rarity": "silver",
-    "description": "상대의 다음 첫 굴림에서 가장 높은 주사위 하나가 미끄러져 1로 바뀌어요. 같은 눈이면 무작위 하나! 이후 다시 굴릴 수 있어요. 게임당 2회.",
+    "description": "상대 다음 첫 굴림의 가장 높은 변경 가능한 주사위를 1로! 실제로 낮추면 나는 +8점, 이미 모두 1이면 +4점. 상대는 다시 굴릴 수 있어요. 방패로 방어, 게임당 2회.",
     "charges": 2,
     "trigger": "active",
     "tags": [
@@ -661,7 +661,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     "id": "receipt",
     "name": "그거 굴리면 터진다",
     "rarity": "silver",
-    "description": "상대의 다음 첫 굴림에 폭탄 하나! 그 주사위를 다시 굴리면 나는 +8점, 끝까지 안 굴리고 기록하면 상대 -8점. 한 폭탄은 한 번만 터져요. 방패로 방어, 게임당 2회.",
+    "description": "방패를 통과하면 즉시 +6점! 상대 다음 첫 굴림의 폭탄을 다시 굴리면 나는 추가 +8점, 그대로 기록하면 상대 -8점. 게임당 2회.",
     "charges": 2,
     "trigger": "active",
     "tags": [
@@ -760,7 +760,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     "tags": [
       "attack"
     ],
-    "description": "상대의 다음 턴에 3개 이상 보관한 적이 있으면 기록할 때 -8점! 예약 성공 시 나는 +3점. 방패로 막으면 둘 다 없음, 게임당 2회.",
+    "description": "상대 다음 턴에 3개 이상 보관한 적이 있으면 기록할 때 -8점! 방패를 통과해 예약하면 나는 즉시 +5점. 게임당 2회.",
     "details": []
   },
   {
@@ -812,7 +812,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     "tags": [
       "attack"
     ],
-    "description": "상대와 수배할 숫자를 고르세요. 상대의 다음 최종 결과에 2개 이상 있으면 나는 +8점! 피하면 상대가 +3점. 공격이 아니므로 방패를 쓰지 않아요. 게임당 2회.",
+    "description": "상대와 수배할 숫자를 골라요. 상대 다음 최종 결과에 2개 이상 있으면 나는 +12점! 피하면 나와 상대가 각각 +3점. 방패로 막지 않는 내기, 게임당 2회.",
     "details": []
   },
   {
@@ -876,7 +876,7 @@ export const AUGMENTS: AugmentDefinition[] = [
       "gamble"
     ],
     "flash": true,
-    "description": "나는 즉시 +8점! 참가자 모두 다음 자기 턴에 1이 있으면 +5점, 하나도 없으면 -5점. 1이 3개 이상이면 대신 +10점! 방패로 불참 가능, 게임당 1회.",
+    "description": "나는 즉시 +20점, 회식 면제! 참가 상대는 다음 턴 1이 없으면 -5점, 있으면 +5점, 3개 이상이면 +10점. 방패로 불참 가능, 게임당 1회.",
     "details": []
   },
   {
@@ -889,7 +889,7 @@ export const AUGMENTS: AugmentDefinition[] = [
       "attack"
     ],
     "flash": true,
-    "description": "상대는 다음 턴 내게 15점을 내거나 폭탄을 열어요. 1~4면 상대가 내게 25점, 5~6이면 역폭발! 내가 상대에게 10점. 가진 점수까지만 이동, 피해 상한 25점 예외. 게임당 1회.",
+    "description": "상대는 다음 턴 배송비 18점을 내거나 폭탄을 열어요. 1~4면 내게 30점, 5~6이면 내가 상대에게 10점! 가진 점수까지만 이동, 피해 상한 30점 예외. 게임당 1회.",
     "details": []
   },
   {
@@ -928,7 +928,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     "tags": [
       "attack"
     ],
-    "description": "상대가 두 번째 일반 굴림을 마치면 가장 높은 주사위 하나를 강제로 다시 던져요. 강제 고정 제외, 새 결과 필수! 완료하면 나는 +6점, 첫 굴림만 기록해 피하면 +3점. 게임당 2회.",
+    "description": "상대 두 번째 굴림의 최고 눈 하나를 강제 재굴림하고 나는 +8점! 첫 굴림 기록이나 재굴림 불가로 피하면 +5점. 게임당 2회.",
     "details": []
   },
   {
@@ -987,7 +987,7 @@ export const AUGMENTS: AugmentDefinition[] = [
       "roll",
       "change"
     ],
-    "description": "첫 굴림 전 주사위 둘을 실제 12면체 하나로 합쳐요. 굴린 눈을 합이 같은 1~6 두 개로 나눈 뒤 기록! 1이면 1+1과 -8점. 다른 6면체 능력은 가능, 괴물 직접 변경·세계 되돌리기는 불가. 게임당 2회.",
+    "description": "주사위 둘을 12면체로 합쳐요. 굴린 눈 또는 13에서 뺀 수를 합계로 두 주사위에 나누고 +8점! 분열 뒤 추가 굴림 불가. 게임당 2회.",
     "details": []
   },
   {
@@ -1000,7 +1000,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     "tags": [
       "attack"
     ],
-    "description": "상대와 각자 2턴 동안 공동 주사위의 마지막 눈을 넘겨요. 기록하는 사람의 공동 눈이 4~6이면 본인 +6, 1~3이면 연결된 상대 +6! 한 사람 최대 18점. 다음 첫 굴림에는 보관, 이후 재굴림 가능. 추가 주사위 아님, 게임당 1회.",
+    "description": "상대와 각자 2턴 공동 주사위를 전달해요. 계약금 +10점! 기록한 공동 눈이 4~6이면 본인, 1~3이면 상대가 +6점(각 최대 18점). 시전자는 받을 때 추가 +3점(최대 9점). 게임당 1회.",
     "details": [
       "화면에서 표시된 공동 주사위 하나를 사용합니다. 주사위 수는 늘지 않습니다.",
       "기록하는 사람 기준으로 공동 눈이 4~6이면 본인이 +6점, 1~3이면 연결된 상대가 +6점입니다.",
@@ -1016,9 +1016,9 @@ export const AUGMENTS: AugmentDefinition[] = [
     "tags": [
       "score"
     ],
-    "description": "빈 칸 3곳을 계약해요. 2곳에 1점 이상 기록하면 +8점, 3곳 완공 시 추가 +24점! 0점으로 실패한 부지는 첫 굴림 전에 다른 빈 칸으로 한 번 옮길 수 있어요.",
+    "description": "빈 칸 3곳을 계약해요. 성공할 때마다 첫 곳 +6점, 둘째 +10점, 셋째 +24점! 0점으로 망한 부지는 첫 굴림 전에 한 번 다른 빈칸으로 옮길 수 있어요.",
     "details": [
-      "두 곳 성공 시 누적 +8점, 세 곳 성공 시 누적 +32점입니다.",
+      "한 곳 +6점, 두 곳 누적 +16점, 세 곳 누적 +40점입니다.",
       "0점인 실패 부지 하나만 다른 빈 칸으로 옮깁니다. 이미 완공한 부지는 바꿀 수 없습니다."
     ]
   },
@@ -1032,7 +1032,7 @@ export const AUGMENTS: AugmentDefinition[] = [
     "tags": [
       "score"
     ],
-    "description": "즉시 +10점! 각자 2턴 동안 기본 족보 25점 이상으로 왕관을 뺏어요. 이후에는 현재 기준보다 높아야 탈취! 끝까지 가진 사람 +40점. 다른 미사용 왕관 카드는 즉시 +35점으로 교환. 게임당 1회.",
+    "description": "개최 즉시 +15점! 각자 2턴 동안 기본 25점 이상으로 왕관을 탈취하고 이후엔 더 높은 점수가 필요해요. 우승 +40점, 개최자가 지면 진행비 +15점. 중복 초대장은 35점 환전. 게임당 1회.",
     "details": []
   },
   {
@@ -1143,6 +1143,7 @@ export const augmentCommandSchema = z.strictObject({
   faces: z.array(z.number().int().min(1).max(6)).length(6).optional(),
   categories: z.array(z.string().max(30)).length(3).optional(),
   value: z.number().int().min(0).max(9).optional(),
+  sum: z.number().int().min(2).max(12).optional(),
   target: z.string().max(40).optional(),
   other: z.string().max(40).optional(),
   category: z.string().max(30).optional(),
@@ -1305,7 +1306,7 @@ export const augmentStateSchema = z.object({
   ),
   jackpot: z.object({after: z.number(), entries: z.array(z.object({id: z.string(), score: z.number().nullable()})), pot: z.number()}).optional(),
   custody:z.array(z.object({a:z.string(),b:z.string(),face:z.number().nullable(),aLeft:z.number(),bLeft:z.number(),aPaid:z.number().default(0),bPaid:z.number().default(0)})).optional(),
-  crown:z.object({holder:z.string(),threshold:z.number(),claimed:z.boolean(),finished:z.boolean(),entries:z.array(z.object({id:z.string(),left:z.number()}))}).optional(),
+  crown:z.object({host:z.string().optional(),holder:z.string(),threshold:z.number(),claimed:z.boolean(),finished:z.boolean(),entries:z.array(z.object({id:z.string(),left:z.number()}))}).optional(),
 });
 export type AugmentState = z.infer<typeof augmentStateSchema>;
 export type AugmentPlayer = z.infer<typeof augmentPlayerSchema>;

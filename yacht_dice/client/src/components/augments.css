@@ -1754,3 +1754,89 @@
   padding: 8px;
   margin-inline: -8px;
 }
+
+/* Keep the explanation readable after the short impact animation. */
+.augment-result-burst {
+  max-height: min(65dvh, 540px);
+  overflow-y: auto;
+  pointer-events: auto;
+}
+.effect-overflow {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.augment-result-burst {
+  left: auto;
+  right: 16px;
+  transform: none;
+  max-width: min(440px, calc(100vw - 32px));
+}
+.augment-result-burst > button[aria-pressed] {
+  width: auto;
+  min-width: 48px;
+  padding: 0 8px;
+  font-size: 0.85rem;
+}
+
+/* Draft context remains visible; inspect mode exposes the full board. */
+.draft-overlay {
+  background: transparent;
+  backdrop-filter: none;
+}
+.draft-overlay .augment-dialog {
+  background: #17372ff5;
+}
+.draft-inspect {
+  display: block;
+  margin-left: auto;
+  margin-bottom: 10px;
+  min-height: 44px;
+}
+.draft-return {
+  position: fixed;
+  z-index: 1100;
+  right: 16px;
+  bottom: 16px;
+  min-height: 48px;
+  box-shadow: 0 4px 20px #0008;
+}
+.augment-card > span {
+  min-width: 0;
+}
+.augment-card small,
+.augment-card strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  -webkit-line-clamp: unset;
+  max-height: none;
+  height: auto;
+}
+.augment-offers .augment-card,
+.augment-catalog .augment-card {
+  height: auto;
+  flex-shrink: 0;
+}
+.augment-offer-slot > .augment-card {
+  overflow: visible;
+}
+.augment-offer-slot > .augment-card::before,
+.augment-offer-slot > .augment-card::after {
+  border-radius: inherit;
+  clip-path: inset(0 round 15px);
+}
+@media (min-width: 1200px) {
+  .draft-overlay {
+    justify-content: flex-end;
+  }
+  .draft-overlay .augment-dialog.augment-draft {
+    width: min(880px, 66vw);
+  }
+}
+
+.augment-offers .augment-card small,
+.augment-catalog .augment-card small {
+  font-size: 0.85rem;
+  line-height: 1.6;
+}

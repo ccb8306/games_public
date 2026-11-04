@@ -20,7 +20,7 @@ export function PlayerAugments({
       item.id === "customDie" && player.augment?.customFaces
         ? `개조 완료 · ${player.augment.customFaces.join(" / ")}`
         : item.id === "estate" && player.augment?.estate
-          ? `부지 ${player.augment.estate.completed.length}/3곳 완공 · +${player.augment.estate.paid}/32점`
+          ? `부지 ${player.augment.estate.completed.length}/3곳 완공 · +${player.augment.estate.paid}/40점`
           : item.id === "cashNow"
             ? `증강 보너스 +${item.earned ?? 20}점 지급 완료`
             : goldDisabled(player, item.id)

@@ -90,8 +90,8 @@ export function resolveChoice(
       s,
       reverse ? source : p,
       reverse ? p : source,
-      face === null ? 15 : reverse ? 10 : 25,
-      25,
+      face === null ? 18 : reverse ? 10 : 30,
+      30,
     );
     h.result(
       s,
